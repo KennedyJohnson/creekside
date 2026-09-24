@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Creekside</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0f1a14; font-family: "Pixelify Sans", monospace; }
+  #game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; image-rendering: pixelated; }
+  .ui { position: fixed; pointer-events: none; color: #fff8ec; text-shadow: 0 2px 0 #2a1a12; }
+  #hint { left: 50%; bottom: 28px; transform: translateX(-50%); max-width: min(780px, 90vw); text-align: center;
+    background: rgba(42, 26, 18, .82); border: 3px solid #e8c547; padding: 10px 18px; font-size: 20px; opacity: 0; transition: opacity .2s; }
+  #toast { left: 50%; top: 24px; transform: translateX(-50%); font-size: 24px; opacity: 0; transition: opacity .25s; text-align: center; }
+  #bubble { left: 0; top: 0; background: #fff; color: #161616; text-shadow: none; padding: 4px 10px; border-radius: 10px; font-size: 16px; opacity: 0; transition: opacity .2s; white-space: nowrap; }
+  .show { opacity: 1 !important; }
+  .card { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(20,40,28,.75), rgba(8,14,10,.92)); color: #fff8ec; text-align: center; }
+  .card h1 { font-size: clamp(40px, 8vw, 88px); margin: 0; color: #ffd6a0; text-shadow: 0 5px 0 #6b2d1a; }
+  .card h2 { font-weight: 400; margin: 4px 0 28px; color: #bfe6c0; }
+  .card .cols { display: flex; gap: 48px; font-size: 18px; line-height: 1.6; text-align: left; }
+  .card .blink { margin-top: 32px; font-size: 26px; animation: b 1.2s infinite; }
+  @keyframes b { 50% { opacity: .3; } }
+  .hidden { display: none; }
+  b { color: #ffd23f; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hint" class="ui"></div>
+<div id="toast" class="ui"></div>
+<div id="bubble" class="ui"></div>
+<div id="title" class="card">
+  <h1>Creekside</h1>
+  <h2>an otter &amp; fox adventure (with Bear 🐾)</h2>
+  <div class="cols">
+    <div><b id="p1">Otter</b><br>Move: left stick / WASD<br>Jump / swim up: ✕ / Space<br>Lever: □ / F<br>Call Bear: △ / E<br>♥: L1·R1 / Q</div>
+    <div><b id="p2">Fox</b><br>Move: left stick / ← →<br>Jump (double!): ✕ / ↑<br>Lever: □ / .<br>Call Bear: △ / ,<br>♥: L1·R1 / /</div>
+  </div>
+  <div class="blink">Press ✕ or Enter to start</div>
+</div>
+<div id="win" class="card hidden">
+  <h1>You made it home!</h1>
+  <h2>Chapter 1 complete — Bear is so proud of you two ♥</h2>
+  <div class="blink">Press ✕ to play again</div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
