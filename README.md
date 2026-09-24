@@ -16,7 +16,7 @@ Open the URL it prints (Chrome/Edge). Plug in two PS5 controllers and press any 
 | Move | left stick / WASD | left stick / ← → |
 | Jump | ✕ / Space (swim up in water) | ✕ / ↑ (double jump) |
 | Lever | □ / F | □ / . |
-| Call Bear / make her stay | △ / E | △ / , |
+| Call Bear / make him stay | △ / E | △ / , |
 | ♥ | L1·R1 / Q | L1·R1 / / |
 | Back to checkpoint | Share / R | Share |
 

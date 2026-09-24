@@ -273,7 +273,7 @@ function updatePlayer(c, dt, rects) {
 function callBear(c) {
   const near = Math.abs(bear.x - c.x) < 40 && Math.abs(bear.y - c.y) < 24;
   if (bear.mode === "follow" && bear.target === c && near) {
-    bear.mode = "stay"; bubble("*sits*  Good girl, Bear!");
+    bear.mode = "stay"; bubble("*sits*  Good boy, Bear!");
   } else {
     bear.mode = "follow"; bear.target = c; bubble("Woof! 🐾");
   }

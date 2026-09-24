@@ -27,7 +27,7 @@ export function buildLevel() {
   fill(10, GY - 2, 12, GY - 1, "#");
   L.spawn = { otter: [3, GY - 1], fox: [5, GY - 1], bear: [7, GY - 1] };
   sign(2, GY - 1, "Move with the left stick · ✕ jumps. Fox can double-jump in mid-air!");
-  sign(14, GY - 1, "△ calls Bear to you. Press △ again next to her and she'll sit and stay.");
+  sign(14, GY - 1, "△ calls Bear to you. Press △ again next to him and he'll sit and stay.");
   cp(1);
 
   // 2 · Twin gates
@@ -38,7 +38,7 @@ export function buildLevel() {
   sign(21, GY - 1, "A pressure plate holds the gate open — but only while someone stands on it.");
   plate(35, GY - 1, "B");
   pillarGate(38, "B");
-  sign(34, GY - 1, "Only one plate here... and three of you. Who's a good girl?");
+  sign(34, GY - 1, "Only one plate here... and three of you. Who's a good boy?");
 
   // 3 · The creek
   fill(42, GY, 63, H - 1, "#");
