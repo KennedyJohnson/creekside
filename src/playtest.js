@@ -156,3 +156,18 @@ window.__play = async (upto) => {
   const steps = mod.default(H);
   return run(upto ? steps.slice(0, upto) : steps);
 };
+// __playAll(): play every chapter in turn (reloading between them); read __playAllResults() when done
+window.__playAll = () => {
+  sessionStorage.setItem("botAll", JSON.stringify({ c: 1, res: {} }));
+  location.hash = "c=1&go&bot"; location.reload();
+};
+window.__playAllResults = () => JSON.parse(sessionStorage.getItem("botAll") || "null");
+const all = window.__playAllResults();
+if (all && !all.done) setTimeout(async () => {
+  const r = await window.__play();
+  all.res[all.c] = { ok: r.ok, deaths: r.deaths, friends: r.friends, bones: r.bones, step: r.step, err: r.err };
+  const n = (await import("./level.js")).LEVELS.length;
+  if (all.c >= n) all.done = true; else all.c++;
+  sessionStorage.setItem("botAll", JSON.stringify(all));
+  if (!all.done) { location.hash = `c=${all.c}&go&bot`; location.reload(); }
+}, 300);

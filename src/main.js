@@ -761,7 +761,9 @@ function weightOn(m, ridersOnly) {
   const above = { x: m.x, y: m.y - 30, w: m.w, h: 31 };
   const strip = { x: m.x, y: m.y - 3, w: m.w, h: 4 };
   const loaded = L.blocks.filter((b) => overlaps(b, strip)); // crates resting on it (anyone on those counts too)
-  let w = [otter, fox, bear].filter((c) => c.dead <= 0 && (c.ground === m || (!ridersOnly && loaded.includes(c.ground)) || (ridersOnly && overlaps(c, above)))).length;
+  // standing on it, or on a crate / an animal that's standing on it
+  const rests = (g, n) => g === m || (!ridersOnly && loaded.includes(g)) || (!!g && g.isChar && n < 3 && rests(g.ground, n + 1));
+  let w = [otter, fox, bear].filter((c) => c.dead <= 0 && (rests(c.ground, 0) || (ridersOnly && overlaps(c, above)))).length;
   if (!ridersOnly) loaded.forEach((b) => (w += b.need));
   return w;
 }

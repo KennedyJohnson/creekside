@@ -26,24 +26,24 @@ export default ({ follow, bearSit, wait, until, go, hop, use, call, attack, stop
     }],
     ["pulley", () => {
       bearSit("otter", 37); // keep Bear off the scales for now
-      go({ otter: 40, fox: 38 }, 8);
-      hop("otter", 45);
+      go({ otter: 41, fox: 38 }, 8);            // (the otter fits under the shelf)
+      hop("otter", 45);                          // over A onto B: B sinks, A rises to the shelf
       until(() => B.L.movers[1].y > 19 * T, 4, "otter's side sinks");
-      go({ fox: 41 });
-      hop("fox", 42, { dj: true, up: 3.9 });
-      go({ fox: 42 }); P.fox.facing = -1;
-      follow("fox");
-      until(() => B.bear.ground === B.L.movers[0], 6, "Bear onto the fox's side");
-      until(() => B.otter.y < 12 * T, 8, "otter lifted");
+      go({ fox: 39 });
+      hop("fox", 40, { dj: true, up: 3.9 });     // up onto the shelf
+      B.hold.fox.right = true;                   // shove the crate onto A: balanced
+      until(() => B.L.blocks[1].x >= 42 * T || P.fox.x > 41 * T + 3, 6, "crate onto A"); stop("fox");
+      until(() => Math.abs(B.L.movers[0].y - 16 * T) < 1, 6, "scale level");
+      go({ fox: 42 }, 4);                        // and hop down onto A: it sinks, B rises
+      until(() => P.otter.y < 12 * T, 8, "otter lifted");
       go({ otter: 50 });
     }],
     ["pulley: fox up", () => {
-      call("fox"); // Bear: stay on the sunk side so the otter's side stays up
-      if (B.bear.mode !== "stay") throw new Error("Bear didn't sit");
-      hop("fox", 41, { dj: true, up: 4.0 });
-      go({ fox: 41 });
-      hop("fox", 44, { dj: true, noSettle: true });
-      hop("fox", 48, { dj: true });
+      hop("fox", 41, { dj: true, up: 4.0 });     // out of the pit
+      go({ fox: 39 });
+      hop("fox", 40, { dj: true, up: 3.9 });     // shelf again...
+      hop("fox", 44, { dj: true, noSettle: true }); // ...onto the raised B...
+      hop("fox", 48, { dj: true });              // ...and up before it sinks
       follow("fox");
       go({ otter: 56, fox: 55 }, 8);
     }],
@@ -92,10 +92,10 @@ export default ({ follow, bearSit, wait, until, go, hop, use, call, attack, stop
     ["everyone on the scale", () => {
       go({ fox: 117 });
       hop("fox", 119, { dj: true, up: 4.1 });
-      go({ fox: 123 }, 8, { noJump: false }); // shove the crate off the shelf
+      go({ fox: 123 }, 8, { noJump: true }); // shove the crate off the shelf
       until(() => B.L.blocks.at(-1).y >= 15 * T - 1, 3, "crate down");
       go({ fox: 119 }, 8);
-      go({ otter: 121 }, 8);
+      go({ otter: 120 }, 8);
       go({ otter: 126 }, 8, { noJump: true });
       go({ fox: 123 }, 8, { noJump: true });
       bearSit("fox", 124);

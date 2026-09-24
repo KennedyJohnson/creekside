@@ -44,8 +44,21 @@ Pressure plates (red ones need extra weight), levers, timed and synced buttons, 
    *Save Olive the owl's owlet and Shelly the turtle's hatchling.*
 5. **Lantern Caves**: color walls only one of you can pass, weighted pulleys, switch blocks, a two-rider lift.
    *Bring Luna the bat's pup home.*
-6. **Starry Summit**: the finale: an all-aboard lift, synced buttons, a floating island, and a pulley you only win by piling on weight.
-   *Return Pippa the goat's kid, then meet Rigby at the top.*
+6. **Starry Summit**: an all-aboard lift, synced buttons, a floating island, and a lift that only rises under a heavy load.
+   *Return Pippa the goat's kid.*
+7. **Sunken Grotto**: flooded gates, a pulley you balance with a falling crate, a switch floor over deep water, and a scale that needs everyone.
+   *Help Pearl the turtle find her baby.*
+8. **Clockwork Mill**: a timed relay, lifts held by plates, a key on a very high ledge, Bear's workshop, and a belt gauntlet.
+   *Get Cogsworth's hoglet down from the lift ledge.*
+9. **Frozen Lake**: ice, a crate caged on switch blocks, a crumbling snow bridge with a gate halfway, and a heavy crate to stack on.
+   *Rescue Mo the owl's owlet.*
+10. **Thunder Peak**: the finale: pool-and-perch buttons, the great scale, updrafts, and one last scale for everyone.
+   *Return Pip the goat's kid, then meet Rigby at the very top.*
+
+Hint signs name new mechanics but don't give away solutions. If a puzzle goes wrong (a crate stuck in a pit, say), Options → Back to checkpoint resets that puzzle.
+
+## Playtest bot
+Every chapter has a scripted route in `src/routes/` that plays it with normal controls only (no warping). Run `npm run dev`, open `game.html#c=3&go&bot`, and in the console run `await __play()` for one chapter, or `__playAll()` and later `__playAllResults()` for all ten.
 
 ## Sound
 Chiptune music and sound effects are synthesized live with the Web Audio API. Click or press a key once on the start screen to turn sound on for the whole session (browsers require one click or key press); M mutes.

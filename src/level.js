@@ -355,10 +355,9 @@ function lanternCaves() {
 
   // pulley: the heavier side sinks
   b.cp(29);
-  b.crate(33, 15);
-  fill(36, 16, 41, 18, ".");
-  b.pulley(36, 39, 16, 2.75 * T);
-  fill(42, 12, 50, 21, "#"); fill(51, 10, 60, 21, "#");
+  fill(36, 16, 39, 18, ".");
+  b.pulley(36, 38, 16, 2.75 * T, 2);
+  fill(40, 12, 50, 21, "#"); fill(51, 10, 60, 21, "#");
   b.sign(31, 15, "A pulley: the heavier side sinks and the other rises.");
   b.bone(57, 9);
 
@@ -418,10 +417,10 @@ function starrySummit() {
   b.sign(2, 15, "Starry Summit. Stick together.");
 
   // crumble + switch-block bridge over the void
-  fill(12, 16, 31, 21, ".");
-  fill(12, 16, 15, 16, "C"); fill(16, 16, 16, 16, "S"); fill(17, 16, 21, 16, "u"); fill(22, 16, 22, 16, "S");
-  fill(23, 16, 27, 16, "r"); fill(28, 16, 28, 16, "S"); fill(29, 16, 31, 16, "C");
-  b.lever(10, 15, "K"); b.lever(33, 15, "K");
+  fill(14, 16, 29, 21, ".");
+  fill(14, 16, 15, 16, "C"); fill(16, 16, 16, 16, "S"); fill(17, 16, 21, 16, "u"); fill(22, 16, 22, 16, "S");
+  fill(23, 16, 27, 16, "r"); fill(28, 16, 28, 16, "S"); fill(29, 16, 29, 16, "C");
+  b.lever(12, 15, "K"); b.lever(31, 15, "K");
 
   // everyone aboard
   b.cp(33);
@@ -495,6 +494,8 @@ function sunkenGrotto() {
   b.cp(38);
   fill(42, 16, 45, 20, ".");
   b.pulley(42, 44, 16, 4 * T, 2);
+  fill(40, 12, 41, 12, "S");
+  b.crate(41, 11);
   fill(46, 12, 57, 21, "#");
   b.bone(52, 11);
 
