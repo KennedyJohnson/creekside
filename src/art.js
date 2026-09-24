@@ -201,7 +201,7 @@ export function bakeLevel(level) {
   // background trees (behind terrain)
   for (let x = 2; x < W; x += 5 + Math.floor(r() * 5)) {
     let y = 0;
-    while (y < H && !SOLID.includes(at(x, y))) y++;
+    while (y < H && !"#SDCMBXW^".includes(at(x, y))) y++;
     if (y >= H || at(x, y - 1) !== "." || r() < 0.3) continue;
     const base = y * T, tx = x * T + 8, th = 30 + Math.floor(r() * 20);
     g.fillStyle = "#4b3322"; g.fillRect(tx - 2, base - th, 4, th);
@@ -217,6 +217,11 @@ export function bakeLevel(level) {
     for (let tx = 0; tx < W; tx++) {
       const ch = at(tx, ty), ox = tx * T, oy = ty * T;
       const topOpen = !SOLID.includes(at(tx, ty - 1)) && at(tx, ty - 1) !== "W";
+      let covered = false;
+      for (let y = ty - 1; y >= 0 && !covered; y--) covered = SOLID.includes(at(tx, y));
+      if (covered && ch !== "#" && ch !== "S" && ch !== "W") { // cave backdrop under rock
+        for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) px(ox + x, oy + y, r() < 0.08 ? "#2a1d14" : "#3a2a1e");
+      }
       if (ch === "#") {
         for (let y = 0; y < T; y++)
           for (let x = 0; x < T; x++) {
@@ -284,10 +289,10 @@ export function bakeLevel(level) {
 }
 
 // ---------- Parallax layers ----------
-export function skyLayer() {
+export function skyLayer(cols = ["#6fb7e8", "#bfe6f5", "#fbe7c6"]) {
   const c = canvas(1, 64), g = c.getContext("2d");
   const grd = g.createLinearGradient(0, 0, 0, 64);
-  grd.addColorStop(0, "#6fb7e8"); grd.addColorStop(0.7, "#bfe6f5"); grd.addColorStop(1, "#fbe7c6");
+  grd.addColorStop(0, cols[0]); grd.addColorStop(0.7, cols[1]); grd.addColorStop(1, cols[2]);
   g.fillStyle = grd; g.fillRect(0, 0, 1, 64);
   return { url: c.toDataURL(), w: 1, h: 64, n: 1 };
 }
@@ -318,3 +323,125 @@ export function hillsLayer(w, h, seed, colors, amp, base, trees) {
   }
   return { url: c.toDataURL(), w, h, n: 1 };
 }
+
+// ---------- Friends (NPCs) & carriables ----------
+const K = "#2a1a12";
+export const MAMA_DUCK = strip([[
+  "........kkk...", ".......kgggk..", ".......kgekkyy", ".......kgggkyy", "........kbk...",
+  "k......kbbk...", "kbk...kbbbbk..", "kbbkkkbbbbbk..", ".kbbbbbbwbbk..", "..kbbbbbbbk...",
+  "...kkkkkkk....", ".....y..y.....",
+]], { k: K, g: "#2f7d4a", e: "#111", y: "#f2a531", b: "#9a6b43", w: "#e9dcc4" });
+export const DUCKLING = strip([[
+  "..kk....", ".kyyk...", ".kyekoo.", "kyyyyk..", "kyyyyk..", ".kyyk...", "..o.o...",
+]], { k: "#7a5a12", y: "#ffe066", e: "#111", o: "#f2a531" });
+export const HEDGEHOG = strip([[
+  "....s.s.s.....", "..sssssssss...", ".ssdsdsssdff..", "sssssdsssfefn.", "ssdssssssffff.",
+  "sssssdssffff..", ".sssssfffff...", "..kfk....kfk..",
+]], { s: "#6b4a2f", d: "#4a3320", f: "#e3c49a", e: "#111", n: "#111", k: "#3a2414" });
+export const HOGLET = strip([[
+  ".s.s....", "sssdff..", "ssdfefn.", "ssssff..", ".f..f...",
+]], { s: "#7d5838", d: "#4a3320", f: "#eed3ad", e: "#111", n: "#111" });
+export const BUNNY = strip([[
+  "......ww....", "......wpw...", ".......wpw..", ".......www..", "......wwwww.", "......wwewwn",
+  ".....wwwwww.", "..wwwwwwww..", ".wwwwwwwww..", "wwwwwwwwww..", "wwwwwwwwww..", ".wwwwwwww...",
+  "..ww...ww...",
+]], { w: "#e7e3dc", p: "#f2a3b5", e: "#222", n: "#e8738a" });
+export const CARROT = strip([[
+  ".g.g..", "..gg..", ".oooo.", ".oooo.", "..ooo.", "..oo..", "..oo..", "...o..",
+]], { g: "#4caf50", o: "#f28c28" });
+export const OWL = strip([[
+  ".k........k.", ".bb......bb.", ".bbbbbbbbbb.", "bbwwbbbbwwbb", "bwnnwbbwnnwb", "bbwwbyybwwbb",
+  "bbbbbyybbbbb", "bbttttttttbb", "bttbttttbttb", "bbttttttttbb", ".bbttttttbb.", "..bbbbbbbb..",
+  "...y....y...",
+]], { k: "#3a2414", b: "#7a5230", w: "#f5e6c8", n: "#111", y: "#f2b631", t: "#d8bf94" });
+export const OWLET = strip([[
+  ".b....b.", ".bbbbbb.", "bwnbbnwb", "bbbyybbb", "btttttbb", "bttttttb", ".bbbbbb.", "..y..y..",
+]], { b: "#a58868", w: "#f5e6c8", n: "#111", y: "#f2b631", t: "#efe2cc" });
+export const TURTLE = strip([[
+  "......gggggg......", "....ggdggggdgg....", "...gdggggggggdg.ss", "..ggggdggggdgggses",
+  "..gggggggggggggsss", "..ssssssssssssss..", "...ss........ss...",
+]], { g: "#3f8a36", d: "#2a5e24", s: "#a3c46b", e: "#111" });
+export const BABY_TURTLE = strip([[
+  "...gggg...", "..gdggdgss", ".ggggggses", ".ssssssss.", "..s....s..",
+]], { g: "#4caf50", d: "#2a5e24", s: "#b8d67c", e: "#111" });
+
+// ---------- Mechanic props ----------
+export function crate(w, h, heavy) {
+  const c = canvas(w, h), g = c.getContext("2d");
+  g.fillStyle = heavy ? "#2b2f36" : "#4a2e17"; g.fillRect(0, 0, w, h);
+  g.fillStyle = heavy ? "#6b5436" : "#b07a42"; g.fillRect(1, 1, w - 2, h - 2);
+  g.fillStyle = heavy ? "#4d3c26" : "#8a5a2e";
+  for (let i = 0; i < Math.max(w, h); i++) { g.fillRect(i * w / h, i, 2, 1); g.fillRect(w - 2 - i * w / h, i, 2, 1); }
+  g.fillStyle = heavy ? "#2b2f36" : "#4a2e17";
+  g.fillRect(0, 0, w, 2); g.fillRect(0, h - 2, w, 2); g.fillRect(0, 0, 2, h); g.fillRect(w - 2, 0, 2, h);
+  if (heavy) { g.fillStyle = "#9aa3ad"; [[1, 1], [w - 5, 1], [1, h - 5], [w - 5, h - 5]].forEach(([x, y]) => g.fillRect(x, y, 4, 4)); }
+  return { url: c.toDataURL(), w, h, n: 1 };
+}
+function tileArt(fn) { const c = canvas(16, 16), g = c.getContext("2d"); fn(g, rng(99)); return { url: c.toDataURL(), w: 16, h: 16, n: 1 }; }
+export const DIRT = tileArt((g, r) => {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const n = r(); g.fillStyle = n < 0.1 ? "#5e3a1c" : n < 0.2 ? "#b07a4a" : "#8e5f36"; g.fillRect(x, y, 1, 1);
+  }
+  g.fillStyle = "#c9a07a"; [[3, 4], [10, 9], [6, 12]].forEach(([x, y]) => g.fillRect(x, y, 2, 2));
+  g.fillStyle = "#6e4526"; g.fillRect(0, 0, 16, 1);
+});
+export const CRUMBLE = tileArt((g, r) => {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const n = r(); g.fillStyle = n < 0.12 ? "#a0896a" : "#c7b08a"; g.fillRect(x, y, 1, 1);
+  }
+  g.fillStyle = "#6e5a40";
+  [[3, 0], [4, 1], [4, 2], [5, 3], [11, 5], [10, 6], [10, 7], [9, 8], [9, 9], [2, 10], [3, 11], [13, 12]].forEach(([x, y]) => g.fillRect(x, y, 1, 1));
+  g.fillRect(0, 15, 16, 1);
+});
+export const MUSHROOM = tileArt((g) => {
+  g.fillStyle = "#f3e7d3"; g.fillRect(5, 8, 6, 8);
+  g.fillStyle = "#d62f3a"; g.beginPath(); g.ellipse(8, 8, 8, 7, 0, Math.PI, 0); g.fill(); g.fillRect(0, 7, 16, 2);
+  g.fillStyle = "#fff"; [[3, 4], [8, 2], [12, 5]].forEach(([x, y]) => g.fillRect(x, y, 2, 2));
+});
+export const FLAP = tileArt((g) => {
+  g.fillStyle = "#3a2414"; g.fillRect(0, 0, 16, 16);
+  g.fillStyle = "#b07a42"; g.fillRect(2, 2, 12, 14);
+  g.fillStyle = "#3a2414"; g.fillRect(6, 7, 4, 3); g.fillRect(5, 5, 1, 1); g.fillRect(7, 4, 1, 1); g.fillRect(9, 4, 1, 1); g.fillRect(11, 5, 1, 1);
+});
+export function button(col) {
+  return strip(
+    [
+      ["................", "................", "................", "................", "................", "................",
+       "................", "................", "................", "................", "....cccccccc....", "...cccccccccc...",
+       "...cddddddddc...", "..kkkkkkkkkkkk..", ".kssssssssssssk.", "kkkkkkkkkkkkkkkk"],
+      ["................", "................", "................", "................", "................", "................",
+       "................", "................", "................", "................", "................", "................",
+       "....cccccccc....", "..kkkkkkkkkkkk..", ".kssssssssssssk.", "kkkkkkkkkkkkkkkk"],
+    ],
+    { c: col, d: "#00000055", k: "#3a3a3a", s: "#8a8f99" }
+  );
+}
+
+export const BEETLE = strip(
+  [
+    ["....kkkk....", "..kkppppkk..", ".kpppwpppkk.", "kpppppppppkm", "kpppppppppk.", ".kkkkkkkkkk.", "..k.k..k.k.."],
+    ["....kkkk....", "..kkppppkk..", ".kpppwpppkk.", "kpppppppppkm", "kpppppppppk.", ".kkkkkkkkkk.", ".k.k....k.k."],
+  ],
+  { k: "#2a0f1f", p: "#8b2f5c", w: "#d77aa8", m: "#2a0f1f" }
+);
+export const SWIPE = strip([[
+  "......wwww....", "........www...", ".........ww...", "..........ww..", "..........ww..",
+  "..........ww..", ".........ww...", "........www...", "......wwww....",
+]], { w: "#ffffff" });
+export const BRAMBLE = tileArt((g, r) => {
+  g.fillStyle = "#3d2a1e"; g.fillRect(0, 0, 16, 16);
+  for (let i = 0; i < 7; i++) {
+    g.fillStyle = r() < 0.5 ? "#5a3a5c" : "#6b2d5c";
+    const y = Math.floor(r() * 14); g.fillRect(0, y, 16, 2);
+  }
+  g.fillStyle = "#e24a7a"; for (let i = 0; i < 8; i++) g.fillRect(Math.floor(r() * 15), Math.floor(r() * 15), 1, 1);
+  g.fillStyle = "#4a9451"; [[2, 3], [11, 7], [6, 12]].forEach(([x, y]) => g.fillRect(x, y, 3, 2));
+});
+export const CRACKED = tileArt((g, r) => {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const n = r(); g.fillStyle = n < 0.1 ? "#6a717b" : "#8a929c"; g.fillRect(x, y, 1, 1);
+  }
+  g.fillStyle = "#2b2f36";
+  [[7, 0], [7, 1], [8, 2], [8, 3], [7, 4], [6, 5], [6, 6], [7, 7], [8, 8], [9, 8], [10, 9], [5, 7], [4, 8], [3, 9], [8, 10], [8, 11], [7, 12], [7, 13], [8, 14], [8, 15]]
+    .forEach(([x, y]) => g.fillRect(x, y, 1, 1));
+});

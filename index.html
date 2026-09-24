@@ -23,6 +23,17 @@
   .card .blink { margin-top: 32px; font-size: 26px; animation: b 1.2s infinite; }
   @keyframes b { 50% { opacity: .3; } }
   .hidden { display: none; }
+  #hud { left: 16px; top: 12px; font-size: 18px; opacity: .9; }
+  #timer { right: 20px; top: 12px; font-size: 34px; color: #ffd23f; opacity: 0; }
+  #chapters { display: flex; gap: 14px; margin-top: 26px; font-size: 20px; flex-wrap: wrap; justify-content: center; }
+  #chapters span { padding: 6px 12px; border: 2px solid transparent; opacity: .75; }
+  #chapters span.sel { border-color: #ffd23f; opacity: 1; color: #ffd23f; }
+  #chapters span.lock { opacity: .35; }
+  body.rain::after { content: ""; position: fixed; inset: 0; pointer-events: none;
+    background: linear-gradient(rgba(10,20,40,.25), rgba(10,20,40,.25)),
+      repeating-linear-gradient(105deg, transparent 0 18px, rgba(200,220,255,.18) 18px 19px);
+    background-size: 100% 100%, 300px 300px; animation: rain .35s linear infinite; }
+  @keyframes rain { to { background-position: 0 0, -60px 300px; } }
   b { color: #ffd23f; }
 </style>
 </head>
@@ -31,19 +42,22 @@
 <div id="hint" class="ui"></div>
 <div id="toast" class="ui"></div>
 <div id="bubble" class="ui"></div>
+<div id="hud" class="ui"></div>
+<div id="timer" class="ui"></div>
 <div id="title" class="card">
   <h1>Creekside</h1>
   <h2>an otter &amp; fox adventure (with Bear 🐾)</h2>
   <div class="cols">
-    <div><b id="p1">Otter</b><br>Move: left stick / WASD<br>Jump / swim up: ✕ / Space<br>Lever: □ / F<br>Call Bear: △ / E<br>♥: L1·R1 / Q</div>
-    <div><b id="p2">Fox</b><br>Move: left stick / ← →<br>Jump (double!): ✕ / ↑<br>Lever: □ / .<br>Call Bear: △ / ,<br>♥: L1·R1 / /</div>
+    <div><b id="p1">Otter</b><br>Move: left stick / WASD<br>Jump · swim up: ✕ / Space<br>Swipe: ○ / C<br>SLAM (mid-air): R2 / G<br>Lever · send Bear: □ / F<br>Call Bear · stay: △ / E<br>Pet Bear · ♥: L1·R1 / Q</div>
+    <div><b id="p2">Fox</b><br>Move: left stick / ← →<br>Jump (double!): ✕ / ↑<br>Swipe: ○ / L<br>DASH: R2 / K<br>Lever · send Bear: □ / .<br>Call Bear · stay: △ / ,<br>Pet Bear · ♥: L1·R1 / /</div>
   </div>
-  <div class="blink">Press ✕ or Enter to start</div>
+  <div id="chapters"></div>
+  <div class="blink">◀ ▶ pick a chapter · ✕ or Enter to start</div>
 </div>
 <div id="win" class="card hidden">
-  <h1>You made it home!</h1>
-  <h2>Chapter 1 complete — Bear is so proud of you two ♥</h2>
-  <div class="blink">Press ✕ to play again</div>
+  <h1 id="winTitle">You made it home!</h1>
+  <h2 id="winSub"></h2>
+  <div class="blink" id="winNext">Press ✕ for the next chapter</div>
 </div>
 <script type="module" src="/src/main.js"></script>
 </body>

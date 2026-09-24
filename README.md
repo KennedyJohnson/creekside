@@ -1,39 +1,43 @@
 # Creekside 🦦🦊🐾
 
+**▶ Play it: https://kennedyjohnson.github.io/creekside/**
+
 A couch co-op pixel puzzle-platformer for two, built on [Emerald Engine](https://github.com/vahan-gev/emeraldengine).
-Play as an **otter** and a **red fox** (plus **Bear**, a black & white mini aussiedoodle) and solve puzzles that need both of you.
+Play as an **otter** and a **red fox**, with **Bear**, a black & white mini aussiedoodle, helping along the way.
+Solve puzzles that need all three of you, and help lost woodland friends get home.
 Inspired by *It Takes Two* and *Pico Park*.
 
-## Run
-```
-npm install
-npm run dev
-```
-Open the URL it prints (Chrome/Edge). Plug in two PS5 controllers and press any button on each so the browser detects them: controller 1 is the otter, controller 2 is the fox.
+## How to play
+Open the link in **Chrome or Edge**, plug in two PS5 controllers, and press any button on each so the browser detects them.
+Controller 1 is the otter, controller 2 is the fox. Pick a chapter with ◀ ▶ and press ✕.
+Progress is saved in your browser, so finished chapters unlock the next one.
 
-| | Otter (pad 1 / keyboard) | Fox (pad 2 / keyboard) |
+| | Otter (controller 1 / keyboard) | Fox (controller 2 / keyboard) |
 |---|---|---|
 | Move | left stick / WASD | left stick / ← → |
 | Jump | ✕ / Space (swim up in water) | ✕ / ↑ (double jump) |
-| Lever | □ / F | □ / . |
-| Call Bear / make him stay | △ / E | △ / , |
-| ♥ | L1·R1 / Q | L1·R1 / / |
+| Swipe (beetles, brambles) | ○ / C | ○ / L |
+| Special | R2 / G: **Slam** (in mid-air, breaks cracked rock) | R2 / K: **Dash** (crosses wide gaps) |
+| Lever / button, or send Bear ahead | □ / F | □ / . |
+| Call Bear / tell him to stay | △ / E | △ / , |
+| Pet Bear (next to him) / ♥ | L1·R1 / Q | L1·R1 / / |
 | Back to checkpoint | Share / R | Share |
 
-## Chapter 1: Creekside
-1. **Twin gates**: hold a pressure plate so your partner can get through, then swap.
-2. **Bear's plate**: one plate and three of you. Tell Bear to *stay* on it.
-3. **The creek**: foxes can't swim. The otter dives for a lever that raises a log bridge.
-4. **The cliff**: too high for anyone alone. The fox jumps off the otter's head, then pulls a lever to lift the elevator.
-5. **The boulder**: it only moves when you both push at once, and it fills the thorn pit.
-6. **Bear's meadow**: three plates (one only the fox can reach), then a shared key on a tall pillar to carry to the den.
+## The team
+- **Otter**: swims, slams through cracked rock.
+- **Fox**: double-jumps and dashes, but can't swim.
+- **Bear**: follows whoever called him last, sits and stays on plates, digs through soft dirt, fits through doggy doors, and is scared of water. Loves pets.
 
-## Ideas for next chapters
-- Tether rope between the two (Pico Park): swing, and pull your partner up
-- Seesaw / weight puzzles (otter heavier than fox)
-- Fox-only small tunnels, otter-only currents
-- Bear fetches sticks to a switch; Bear digs in soft dirt
-- Moving-screen chase section; shared-screen "both must press at the same time" doors
-- Real sound effects and music
+## Chapters
+1. **Creekside**: pressure plates, the creek lever, stacking to climb a cliff, a boulder you push together, three plates at once, and a key.
+   *Help Mama Duck find her duckling.*
+2. **Mossy Hollow**: crates, crate-filled thorn pits, Bear digging, brambles, a timed button race, a heavy crate, and the otter's slam.
+   *Rescue Hazel the hedgehog's hoglet from a caved-in burrow.*
+3. **Windy Ridge**: bounce mushrooms, moving logs, crumbling rocks, a Bear-only doggy door, and the fox's dash.
+   *Bring Clover the bunny her carrot.*
+4. **Stormy Falls**: buttons you both have to press at the same moment, plus everything else combined, in the rain.
+   *Save Olive the owl's owlet and Shelly the turtle's hatchling.*
 
-Art is all procedural pixel art in `src/art.js` (ASCII sprite grids). Level layout is in `src/level.js`.
+## Development
+Every push to `master` is built and deployed to GitHub Pages automatically by `.github/workflows/pages.yml`.
+All art is procedural pixel art in `src/art.js` (ASCII sprite grids). Chapter layouts are in `src/level.js`, and game logic is in `src/main.js`.
