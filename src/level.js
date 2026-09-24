@@ -569,8 +569,9 @@ function clockworkMill() {
 
   // Bear's workshop: only he fits through the little door
   b.cp(82);
-  fill(88, 3, 88, 11, "S"); b.gate(88, 15, "F", { pillar: false }); b.flap(88, 15);
-  fill(95, 3, 95, 12, "S"); b.gate(95, GY, "F", { pillar: false });
+  // latched: Bear can't be told to sit in there, so the gates stay open once he and the crate press the plate
+  fill(88, 3, 88, 11, "S"); b.gate(88, 15, "F", { pillar: false, latch: true }); b.flap(88, 15);
+  fill(95, 3, 95, 12, "S"); b.gate(95, GY, "F", { pillar: false, latch: true });
   fill(91, 12, 91, 15, "D");
   b.crate(91, 11);
   b.plate(89, 15, "F", { need: 2, w: 6 });

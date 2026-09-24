@@ -804,8 +804,24 @@ function updateWorld(dt, rects) {
     const on = channel(g.ch) >= g.need;
     if (on && g.latch && !g.latched) { g.latched = true; toast("The big gate rumbles open! 🎉"); }
     if ((on || g.latched) !== !!g.wasOn) { g.wasOn = on || g.latched; sfx("gate"); }
-    const blocked = bodies.some((b) => b !== g && overlaps(b, g));
-    const target = on || g.latched || (g.open > 0.5 && blocked) ? 1 : 0;
+    // No holding the gate open by rushing into it: anyone still in the doorway when
+    // the plate is released gets nudged back to the side they came from, so getting
+    // through takes a partner (or Bear) standing on the plate.
+    g.side ??= new Map();
+    // a doggy door under the gate is Bear's way through, so he's never nudged back there
+    g.flap ??= L.flaps.some((f) => f.x < g.x + g.w && f.x + f.w > g.x && Math.abs(f.y - (g.y + g.h)) < T);
+    const open = on || g.latched;
+    bodies.forEach((b) => {
+      if (b === bear && g.flap) return;
+      const mid = b.x + b.w / 2, gmid = g.x + g.w / 2;
+      if (!overlaps(b, g)) { g.side.set(b, mid < gmid ? -1 : 1); return; }
+      if (open) return;
+      const side = g.side.get(b) ?? (mid < gmid ? -1 : 1);
+      b.x = side < 0 ? g.x - b.w - 0.01 : g.x + g.w + 0.01;
+      if (Math.sign(b.vx || 0) === -side) b.vx = 0;
+      if (b.dash) b.dash = 0;
+    });
+    const target = open ? 1 : 0;
     g.open += Math.sign(target - g.open) * Math.min(Math.abs(target - g.open), dt * 3);
     // retract upward into the pillar by shrinking from the bottom
     const vis = Math.max(0, 1 - g.open);

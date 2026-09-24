@@ -19,6 +19,7 @@ export default ({ follow, cross, bearSit, wait, until, go, hop, use, call, attac
     ["two plates, one crate", () => {
       go({ otter: 24 });
       go({ otter: 28 }, 8, { noJump: true }); // crate onto the first plate
+      hop("otter", 30); // over the crate, leaving it on the plate (a crate wedged in the gate no longer holds it open)
       bearSit("otter", 31);
       until(() => gateOpen("A"), 4, "gate A");
       go({ otter: 36, fox: 35 }, 8);
