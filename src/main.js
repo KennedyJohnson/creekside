@@ -28,7 +28,7 @@ if (TH.rain) document.body.classList.add("rain");
 let Z = 3, viewW = 400, viewH = 240;
 function fit() {
   Z = Math.max(2, Math.floor(window.innerHeight / (13 * T)));
-  viewW = window.innerWidth / Z;
+  viewW = hp.has("bot") ? 384 : window.innerWidth / Z; // bot: tightest common 16:9 leash
   viewH = window.innerHeight / Z;
   emerald.resize?.(window.innerWidth, window.innerHeight);
   emerald.camera.setZoom(Z);
@@ -185,13 +185,15 @@ bindPads();
 window.addEventListener("gamepadconnected", bindPads);
 window.addEventListener("gamepaddisconnected", bindPads);
 let edgeOff = false;
-const pressed = (who, a) => !edgeOff && input.justPressed(`${who}.${a}`);
-const held = (who, a) => input.isDown(`${who}.${a}`);
+// playtest bot (#bot): scripted virtual inputs replace the keyboard / pads
+const bot = { on: hp.has("bot"), hold: { otter: {}, fox: {} }, tap: { otter: {}, fox: {} } };
+const pressed = (who, a) => !edgeOff && (bot.on ? !!bot.tap[who][a] : input.justPressed(`${who}.${a}`));
+const held = (who, a) => (bot.on ? !!bot.hold[who][a] : input.isDown(`${who}.${a}`));
 function stick(who) {
   const pad = padFor[who];
   let x = (held(who, "right") ? 1 : 0) - (held(who, "left") ? 1 : 0);
   let y = (held(who, "down") ? 1 : 0) - (held(who, "up") ? 1 : 0);
-  if (input.isGamepadConnected?.(pad)) {
+  if (!bot.on && input.isGamepadConnected?.(pad)) {
     const s = input.getGamepadStick("left", pad);
     if (Math.abs(s.x) > Math.abs(x)) x = s.x;
     if (Math.abs(s.y) > Math.abs(y)) y = s.y;
@@ -354,13 +356,13 @@ const SPEC = {
   bear: { speed: 95, jump: 290 },
 };
 
-let cpIdx = 0;
+let cpIdx = 0, deaths = 0;
 function spawnAt(c, tx) { c.x = tx * T + 1; c.y = groundY(tx) - c.h; c.vx = c.vy = 0; c.ground = null; c.dash = 0; c.slam = false; }
 function respawn(c) {
   const tx = L.checkpoints[cpIdx].tx + (c === otter ? 0 : c === fox ? 1 : 2);
   burst(c.x + c.w / 2, c.y + c.h / 2, 14, [255, 255, 255]);
   spawnAt(c, tx);
-  c.dead = 0.8;
+  c.dead = 0.8; deaths++;
   L.items.forEach((it) => { if (it.carrier === c) { it.carrier = null; it.x = it.hx; it.y = it.hy; } });
 }
 spawnAt(otter, L.spawn); spawnAt(fox, L.spawn + 2); spawnAt(bear, L.spawn + 4);
@@ -395,6 +397,8 @@ function move(b, d, axis, rects) {
     }
   for (const r of rects) {
     if (r === b || !overlaps(b, r)) continue;
+    // riding a rising platform leaves a sliver of overlap: that's floor contact, not a wall
+    if (axis === "x" && Math.min(b.y + b.h - r.y, r.y + r.h - b.y) < 1) continue;
     if (axis === "x") b.x = d > 0 ? r.x - b.w : r.x + r.w;
     else b.y = d > 0 ? r.y - b.h : r.y + r.h;
     hit = r;
@@ -966,7 +970,7 @@ const toScreen = (x, y) => [window.innerWidth / 2 + (x - camX) * Z, window.inner
 // ---------- Game flow ----------
 let state = hp.has("go") ? "play" : "splash", winT = 0, sel = chapter;
 const titleEl = $("title"), winEl = $("win"), chapEl = $("chapters");
-const CH_NAMES = ["Creekside", "Mossy Hollow", "Windy Ridge", "Stormy Falls", "Lantern Caves", "Starry Summit"];
+const CH_NAMES = ["Creekside", "Mossy Hollow", "Windy Ridge", "Stormy Falls", "Lantern Caves", "Starry Summit", "Sunken Grotto", "Clockwork Mill", "Frozen Lake", "Thunder Peak"];
 const splashEl = $("splash"), pauseEl = $("pause"), whoEl = $("who");
 function drawWho() {
   const p1 = swapPlayers ? "fox" : "otter", p2 = swapPlayers ? "otter" : "fox";
@@ -1011,7 +1015,7 @@ const MENU = [
   { label: "Warp otter to red panda", act: () => warpTo(otter, fox) },
   { label: "Back to checkpoint (both)", act: () => { respawn(otter); respawn(fox); resetSectionBlocks(); setPause(false); } },
   { label: "Restart chapter", act: () => gotoChapter(chapter) },
-  { label: "Unlock all chapters", act: () => { try { localStorage.setItem("creekside.unlocked", "6"); } catch {} unlocked = 6; toast("All chapters unlocked! Pick any from Chapter select.", 2.5); setPause(false); } },
+  { label: "Unlock all chapters", act: () => { try { localStorage.setItem("creekside.unlocked", String(LEVELS.length)); } catch {} unlocked = LEVELS.length; toast("All chapters unlocked! Pick any from Chapter select.", 2.5); setPause(false); } },
   { label: "Swap who plays who", act: () => { setSwap(!swapPlayers); toast(`Player 1 is now the ${swapPlayers ? "red panda" : "otter"}!`, 2); setPause(false); } },
   { label: "Chapter select", act: () => { location.hash = ""; location.reload(); } },
 ];
@@ -1183,7 +1187,7 @@ hearts.forEach((h) => h.s.hide());
 players.forEach((p) => p.swipe.hide());
 updateCamera(0, true);
 emerald.run((dt) => {
-  frame(dt);
+  if (!bot.on) frame(dt);
   emerald.drawScene(scene, dt);
   input.update();
 });
@@ -1196,4 +1200,11 @@ window.__solveAll = () => {
   L.grid.forEach((row, y) => row.forEach((c, x) => { if ("DBX".includes(c)) destroyTile(x, y); if (c === "u" || c === "r") row[x] = "S"; if (c === "G") row[x] = "F"; }));
 };
 window.__setCp = (i) => { cpIdx = i; respawn(otter); respawn(fox); };
+// bot.step(n): advance n fixed 1/60 s frames synchronously, consuming taps after the first
+window.__bot = Object.defineProperties(bot, Object.getOwnPropertyDescriptors({
+  step(n = 1) { for (let i = 0; i < n; i++) { frame(1 / 60); bot.tap = { otter: {}, fox: {} }; } },
+  get cp() { return cpIdx; }, get deaths() { return deaths; }, get bones() { return bones; }, get friends() { return friends; },
+  get won() { return state === "win"; }, L, otter, fox, bear, special, enemies, channel,
+}));
 window.__game = { otter, fox, bear, L, enemies, special, input, frames: () => frameN, get state() { return state; }, get friends() { return friends; } };
+if (bot.on) import("./playtest.js");

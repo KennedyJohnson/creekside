@@ -29,10 +29,10 @@ function builder(W, name, sub, theme) {
       L.gates.push({ x: tx * T + 3, y: (floor - rows) * T, w: 10, h: rows * T, ch, need: o.need || 1, latch: !!o.latch, open: 0, latched: false });
     },
     // pulley pair: the heavier platform sinks, the other rises
-    pulley(txA, txB, row, range) {
+    pulley(txA, txB, row, range, w = 3) {
       const id = L.movers.length;
       for (const [tx, side] of [[txA, 1], [txB, -1]])
-        b.mover({ x0: tx * T, y0: row * T, x1: tx * T, y1: row * T, w: 3 * T, h: 8, pulley: id, side, range, speed: 45 });
+        b.mover({ x0: tx * T, y0: row * T, x1: tx * T, y1: row * T, w: w * T, h: 8, pulley: id, side, range, speed: 45 });
     },
     flap: (tx, ty) => L.flaps.push({ x: tx * T, y: ty * T, w: T, h: T, flap: true }),
     cp: (tx) => L.checkpoints.push({ tx }),
@@ -484,4 +484,119 @@ function starrySummit() {
   return b.L;
 }
 
-LEVELS.push(lanternCaves, starrySummit);
+// ------------------------------------------------------------------ Chapter 7
+function sunkenGrotto() {
+  const b = builder(150, "Chapter 7 · Sunken Grotto", "Flooded tunnels. The otter is in their element... the red panda, less so.",
+    { sky: ["#0c2630", "#17404c", "#23596a"], far: ["#163844", "#1f4b58"], mid: ["#1d4a50", "#285c62", "#143a40"], bg: [18, 48, 58], fireflies: true });
+  const { fill, GY } = b;
+  fill(0, GY, 149, 21, "#");
+  fill(0, 0, 149, 2, "S");
+  b.spawn(3); b.cp(1);
+  b.sign(4, 15, "Sunken Grotto. Mind the water, red panda.");
+
+  // the gate hangs over the pool: there's a way under it, for some of you
+  fill(10, 16, 25, 19, "W");
+  b.gate(18, GY, "A");
+  b.bridge(10, 25, 15, "A");
+  b.crate(27, 15);
+  b.plate(29, 15, "A", { need: 2, w: 2 });
+  fill(31, 15, 31, 15, "S");
+  const pearl = b.npc("TURTLE", 35, 15, "Pearl", "My baby wandered into the pool and can't find the way up!", "Oh, there you are, little one! Thank you!");
+  b.item("BABY_TURTLE", 13, 19, pearl);
+
+  // pulley: 2-wide platforms, the heavier side sinks
+  b.cp(38);
+  fill(42, 16, 45, 20, ".");
+  b.pulley(42, 44, 16, 4 * T, 2);
+  fill(46, 12, 57, 21, "#");
+  b.bone(52, 11);
+
+  // switch floor over deep water, with the lever at the bottom
+  b.cp(58);
+  fill(62, 16, 93, 20, "W");
+  fill(62, 15, 66, 15, "r"); fill(67, 15, 77, 15, "u"); fill(78, 15, 82, 15, "r"); fill(83, 15, 93, 15, "u");
+  b.lever(79, 20, "K");
+  b.item("KEY", 91, 20);
+  b.sign(59, 15, "Switch blocks: a lever swaps which color is solid.");
+  b.beetle(99, 15);
+
+  // cracked floor with a crate on it, over a hidden pit
+  b.cp(96);
+  fill(104, 16, 106, 18, "."); fill(104, 16, 106, 16, "X");
+  b.crate(105, 15);
+  b.plate(104, 18, "C", { w: 3 });
+  b.gate(113, GY, "C");
+
+  // everyone on the scale
+  b.cp(115);
+  fill(118, 12, 121, 12, "S");
+  b.crate(120, 11);
+  b.plate(124, 15, "E", { need: 4, w: 5 });
+  b.gate(132, GY, "E", { latch: true });
+  b.bone(119, 11);
+  b.cp(134);
+  b.exit(140, GY);
+  return b.L;
+}
+
+// ------------------------------------------------------------------ Chapter 8
+function clockworkMill() {
+  const b = builder(145, "Chapter 8 · Clockwork Mill", "Timers, lifts and belts. Plan it out before you press anything.",
+    { sky: ["#2e1d12", "#4a3020", "#6a4a2c"], far: ["#3a2618", "#4a3322"], mid: ["#5a3c24", "#6a4a2e", "#3e2816"], bg: [58, 38, 24], fireflies: true });
+  const { fill, GY } = b;
+  fill(0, GY, 144, 21, "#");
+  fill(0, 0, 144, 2, "S");
+  b.spawn(3); b.cp(1);
+  b.sign(4, 15, "Clockwork Mill. Red buttons only stay pressed for a few seconds.");
+
+  // two timed buttons hold one gate: one low, one high
+  b.button(15, 15, "A", { timer: 5 });
+  fill(16, 11, 18, 11, "S");
+  b.button(17, 10, "A", { timer: 5 });
+  b.gate(29, GY, "A", { need: 2 });
+
+  // a two-seat lift up to a gate held by a heavy plate
+  b.cp(31);
+  b.crate(34, 15);
+  b.plate(36, 15, "B", { need: 2, w: 3 });
+  fill(41, 16, 43, 16, ".");
+  b.mover({ x0: 41 * T, y0: 16 * T, x1: 41 * T, y1: 9 * T, w: 3 * T, riders: 2, speed: 35 });
+  fill(44, 9, 61, 21, "#");
+  b.gate(51, 9, "B");
+  b.beetle(57, 8);
+  b.bone(60, 8);
+
+  // the key is up very high; the lift only runs while its plate is held
+  b.cp(63);
+  b.crate(73, 15);
+  b.plate(66, 15, "E", { w: 2 });
+  fill(69, 16, 71, 16, ".");
+  b.mover({ x0: 69 * T, y0: 16 * T, x1: 69 * T, y1: 10 * T, w: 3 * T, ch: "E", speed: 35 });
+  fill(72, 4, 75, 4, "S");
+  b.item("KEY", 74, 3);
+  const cogs = b.npc("HEDGEHOG", 79, 15, "Cogsworth", "My hoglet climbed onto the big lift ledge and now she's stuck up there!", "There you are! No more climbing machines, young lady.");
+  b.item("HOGLET", 72, 3, cogs);
+
+  // Bear's workshop: only he fits through the little door
+  b.cp(82);
+  fill(88, 3, 88, 11, "S"); b.gate(88, 15, "F", { pillar: false }); b.flap(88, 15);
+  fill(95, 3, 95, 12, "S"); b.gate(95, GY, "F", { pillar: false });
+  fill(91, 12, 91, 15, "D");
+  b.crate(91, 11);
+  b.plate(89, 15, "F", { need: 2, w: 6 });
+  b.sign(84, 15, "Only Bear fits through doggy doors.");
+
+  // belt gauntlet, then a heavy scale
+  b.cp(98);
+  fill(102, 16, 118, 16, "<");
+  fill(106, 15, 106, 15, "T"); fill(110, 15, 110, 15, "T"); fill(114, 15, 114, 15, "T");
+  b.beetle(116, 15);
+  b.heavy(121, 15);
+  b.plate(125, 15, "H", { need: 5, w: 4 });
+  b.gate(131, GY, "H", { latch: true });
+  b.cp(133);
+  b.exit(138, GY);
+  return b.L;
+}
+
+LEVELS.push(lanternCaves, starrySummit, sunkenGrotto, clockworkMill);
