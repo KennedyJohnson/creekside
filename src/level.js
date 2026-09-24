@@ -178,7 +178,7 @@ function windyRidge() {
   fill(0, GY, 30, 21, "#");
   b.spawn(3); b.cp(1);
   b.sign(2, 15, "Windy Ridge! It only gets trickier from here.");
-  fill(16, 15, 16, 15, "M");
+  fill(17, 15, 17, 15, "M");
   fill(18, 10, 40, 21, "#");
   b.sign(10, 15, "A bouncy mushroom! Hop on it to launch way up.");
 
