@@ -3,7 +3,11 @@ import {
 } from "emeraldengine";
 import * as ART from "./art.js";
 import { LEVELS, T } from "./level.js";
-import { initAudio, sfx, playMusic, toggleMute, vol, applyVolume } from "./audio.js";
+import * as localAudio from "./audio.js";
+// index.html hosts the audio engine and loads the game in an iframe; chapter changes reload only
+// the iframe, so sound unlocked once (first click / key press) keeps playing all session.
+const AU = (() => { try { return (window.parent !== window && window.parent.creekAudio) || localAudio; } catch { return localAudio; } })();
+const { initAudio, sfx, playMusic, toggleMute, vol, applyVolume } = AU;
 
 // ---------- Chapter selection (#c=2&go skips the title) ----------
 const hp = new URLSearchParams(location.hash.slice(1));
@@ -57,7 +61,8 @@ sprite({ url: baked.terrain, w: baked.w, h: baked.h, n: 1 }, -10).place(LW / 2, 
 sprite({ url: baked.water, w: baked.w, h: baked.h, n: 1 }, 5).place(LW / 2, LH / 2);
 
 // Mechanic tiles are individual sprites so they can break / crumble / be dug.
-const TILE_ART = { D: ART.DIRT, C: ART.CRUMBLE, M: ART.MUSHROOM, B: ART.BRAMBLE, X: ART.CRACKED, O: ART.OTTER_WALL, P: ART.PANDA_WALL, r: ART.TOGGLE_A, u: ART.TOGGLE_B };
+const TILE_ART = { D: ART.DIRT, C: ART.CRUMBLE, M: ART.MUSHROOM, B: ART.BRAMBLE, X: ART.CRACKED, O: ART.OTTER_WALL, P: ART.PANDA_WALL, r: ART.TOGGLE_A, u: ART.TOGGLE_B,
+  F: ART.FAN, G: ART.FAN_B, "<": ART.CONV_L, ">": ART.CONV_R, T: ART.SPIKES, I: ART.ICE };
 const special = new Map();
 for (let ty = 0; ty < L.H; ty++)
   for (let tx = 0; tx < L.W; tx++) {
@@ -77,10 +82,10 @@ const solidTile = (tx, ty, b) => {
   if (c === "r" || c === "u") return special.get(`${tx},${ty}`).solid;
   if (c === "O") return !b || b.kind !== "otter";
   if (c === "P") return !b || b.kind !== "fox";
-  return c === "#" || c === "S" || c === "D" || c === "M" || c === "B" || c === "X";
+  return "#SDMBXFG<>I".includes(c) && c !== "";
 };
 const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-const groundY = (tx) => { let y = 0; while (y < L.H && !solidTile(tx, y)) y++; return y * T; };
+const groundY = (tx) => { let y = 0; while (y < L.H && solidTile(tx, y)) y++; while (y < L.H && !solidTile(tx, y)) y++; return y * T; };
 
 const TILE_COLORS = { D: [176, 122, 74], B: [120, 60, 100], X: [150, 150, 160], C: [199, 176, 138] };
 // Brambles and soft dirt clear their whole connected column at once.
@@ -94,7 +99,11 @@ function destroyTile(tx, ty) {
   if (ch === "B" || ch === "D") for (const dy of [-1, 1]) if (tileAt(tx, ty + dy) === ch) destroyTile(tx, ty + dy);
 }
 
-L.plates.forEach((p) => (p.s = sprite(ART.PLATE, -5)));
+L.plates.forEach((p) => {
+  p.s = sprite(ART.PLATE, -5);
+  p.s.go.transform.scale.x = p.w / 2;
+  if (p.need > 1) p.s.tex.setColor(new Color(255, 140, 140));
+});
 const BTN_ART = { timer: ART.button("#e24a4a"), sync: ART.button("#4aa3e2") };
 L.levers.forEach((l) => (l.s = sprite(l.kind === "lever" ? ART.LEVER : l.sync ? BTN_ART.sync : BTN_ART.timer, -5)));
 L.gates.forEach((g) => (g.s = sprite(ART.gate(g.h), -8))); // in front of terrain so cave backdrops never hide it
@@ -243,6 +252,7 @@ if (TH.butterflies) pool(ART.BUTTERFLY, 6, 2, "butterfly");
 if (TH.fireflies) pool(ART.PIXEL, 26, 6, "firefly");
 if (TH.birds) pool(ART.BIRD, 4, -45, "bird");
 if (TH.stars) pool(ART.PIXEL, 40, -58, "star");
+if (TH.rain) pool(ART.DROP, 150, 6, "rain");
 pool(ART.PIXEL, 14, 6, "sparkle");
 const clouds = TH.rain ? [] : [0, 1, 2, 3, 4].map((i) => ({ s: sprite(ART.cloud(i + 3), -55), x: Math.random() * LW, y: 20 + Math.random() * 90, v: 3 + Math.random() * 5 }));
 const waterTops = [];
@@ -266,6 +276,10 @@ function spawnAmbient(a) {
     const dir = Math.random() < 0.5 ? 1 : -1;
     Object.assign(a, { x: dir > 0 ? left - 20 : left + viewW + 20, y: top + 15 + Math.random() * 50, vx: dir * (35 + Math.random() * 20), vy: 0, life: 14 });
     a.s.flip(dir < 0);
+  } else if (a.kind === "rain") {
+    Object.assign(a, { x: left - 40 + Math.random() * (viewW + 120), y: top - Math.random() * viewH, vx: -60, vy: 380 + Math.random() * 80, life: 99 });
+    a.s.go.transform.rotation = -0.15;
+    tint(a.s, [200, 220, 255, 170]);
   } else if (a.kind === "star") {
     Object.assign(a, { ox: Math.random() * viewW, oy: Math.random() * viewH * 0.55, life: 1e9 });
     tint(a.s, [255, 250, 220]);
@@ -292,7 +306,14 @@ function updateAmbient(dt) {
       const glow = 0.5 + 0.5 * Math.sin(a.t * 3 + a.ph);
       a.s.tex.setColor(new Color(255, 240, 140, Math.round(60 + 195 * glow)));
     } else if (a.kind === "bird") { a.x += a.vx * dt; a.y += Math.sin(a.t * 2) * 4 * dt; a.s.frame(Math.floor(a.t * 5) % 2); }
-    else if (a.kind === "star") {
+    else if (a.kind === "rain") {
+      a.x += a.vx * dt; a.y += a.vy * dt;
+      const hit = solidTile(Math.floor(a.x / T), Math.floor(a.y / T)) || tileAt(Math.floor(a.x / T), Math.floor(a.y / T)) === "W";
+      if (hit || a.y > camY + viewH / 2 + 10) {
+        if (hit && Math.random() < 0.25) burst(a.x, a.y - 1, 1, [200, 220, 255], 20, 300);
+        spawnAmbient(a); a.y = camY - viewH / 2 - Math.random() * 30;
+      }
+    } else if (a.kind === "star") {
       a.x = camX - viewW / 2 + a.ox; a.y = camY - viewH / 2 + a.oy;
       a.s.tex.setColor(new Color(255, 250, 220, Math.round(140 + 115 * Math.sin(a.t * 1.5 + a.ph))));
     } else if (a.kind === "sparkle") a.s.tex.setColor(new Color(255, 255, 255, Math.round(255 * Math.min(1, a.life * 3))));
@@ -383,7 +404,12 @@ function move(b, d, axis, rects) {
 
 const tileUnder = (c, fx) => tileAt(Math.floor((c.x + c.w * fx) / T), Math.floor((c.y + c.h + 1) / T));
 function inWaterAt(b) { return tileAt(Math.floor((b.x + b.w / 2) / T), Math.floor((b.y + b.h * 0.6) / T)) === "W"; }
-function onThorns(b) { return tileAt(Math.floor((b.x + b.w / 2) / T), Math.floor((b.y + b.h - 2) / T)) === "^"; }
+let clock = 0;
+const spikesUp = (tx) => ((clock + (tx % 2) * 1.1) % 2.2) < 1.1;
+function onThorns(b) {
+  const tx = Math.floor((b.x + b.w / 2) / T), c = tileAt(tx, Math.floor((b.y + b.h - 2) / T));
+  return c === "^" || (c === "T" && spikesUp(tx));
+}
 
 function physicsStep(c, dt, wantX, rects) {
   if (c.dash > 0) { c.dash -= dt; c.vy = 0; wantX = c.facing * 220; }
@@ -392,11 +418,17 @@ function physicsStep(c, dt, wantX, rects) {
     c.vy = Math.min(c.vy + G * dt, c.inWater ? 90 : c.slam ? 560 : 420);
   }
   const px = c.x;
+  if (c.conv) wantX += c.conv;
   if (c.ground && c.ground.lastDx !== undefined) {
     move(c, c.ground.lastDx, "x", rects);
     move(c, c.ground.lastDy, "y", rects);
   }
-  const hx = move(c, wantX * dt, "x", rects);
+  let hx = move(c, wantX * dt, "x", rects);
+  // step up small lips (lift platforms, bridge edges) instead of stopping dead
+  if (hx && hx !== "tile" && c.onGround && hx.y >= c.y + c.h - 9 && hx.y < c.y + c.h) {
+    c.y = hx.y - c.h;
+    hx = move(c, wantX * dt, "x", rects);
+  }
   const prevBottom = c.y + c.h;
   const yRects = c === bear ? rects
     : rects.concat(players.filter((o) => o !== c && c.vy > 0 && prevBottom <= o.y + 1 && o.dead <= 0));
@@ -409,15 +441,19 @@ function physicsStep(c, dt, wantX, rects) {
       if (c.isChar && vyWas > 180 && !c.onGround) burst(c.x + c.w / 2, c.y + c.h, 4, [230, 215, 190], 25, 60);
       c.onGround = true; c.ground = hy === "tile" ? null : hy; c.air = 0; c.canDash = true;
       if (c.slam) slamImpact(c);
-      if (hy === "tile") landedOnTiles(c);
+      if (hy === "tile") landedOnTiles(c); else { c.conv = 0; c.ice = false; }
     }
   } else c.ground = null;
+  if (!c.onGround) { c.conv = 0; c.ice = false; }
   c.x = Math.min(Math.max(c.x, 0), LW - c.w); // never leave the level sideways
   c.lastDx = c.x - px;
   return hx;
 }
 
 function landedOnTiles(c) {
+  const under = tileUnder(c, 0.5);
+  c.conv = under === ">" ? 45 : under === "<" ? -45 : 0;
+  c.ice = under === "I";
   for (const fx of [0.1, 0.9]) {
     const sp = special.get(`${Math.floor((c.x + c.w * fx) / T)},${Math.floor((c.y + c.h + 1) / T)}`);
     if (sp && sp.ch === "C" && !sp.broken && sp.t === 0) sp.t = 0.001;
@@ -467,6 +503,10 @@ function updatePlayer(c, dt, rects) {
   const other = c === otter ? fox : otter;
   const maxSep = viewW - 40; // couch co-op leash: stay on the same screen
   if (Math.abs(c.x + wantX * dt - other.x) > maxSep && Math.sign(wantX) === Math.sign(c.x - other.x)) wantX = 0;
+  if (c.onGround && c.ice) { // slippery: speed changes slowly
+    c.vx += Math.max(-200 * dt, Math.min(200 * dt, wantX - c.vx));
+    wantX = c.vx;
+  } else c.vx = wantX;
   if (st.x && c.dash <= 0) c.facing = Math.sign(st.x);
   c.atk -= dt; c.atkCd -= dt; c.dashCd -= dt;
 
@@ -675,7 +715,11 @@ function updateEnemies(dt, rects) {
     for (const p of players) {
       if (p.dead > 0 || !overlaps(p, e)) continue;
       if (p.dash > 0 || (p.vy > 60 && p.y + p.h - e.y < 6)) { killEnemy(e); p.vy = -180; }
-      else { toast("Pinched by a bramble beetle! Swipe them with ○.", 2); sfx("hurt"); respawn(p); }
+      else { // pinch: knock back + brief invincibility (no checkpoint loop)
+        toast("Ouch! Pinched by a bramble beetle. Swipe them with ○!", 2); sfx("hurt");
+        p.dead = 1.2; p.vy = -200; p.onGround = false;
+        move(p, Math.sign(p.x - e.x || -e.dir) * 24, "x", rects);
+      }
     }
     e.anim += dt * 6;
     e.s.frame(Math.floor(e.anim) % 2);
@@ -685,9 +729,24 @@ function updateEnemies(dt, rects) {
 }
 
 // ---------- World objects ----------
+// push a crate; crates in the way get pushed too (a row of crates moves together),
+// and anything sitting on top rides along. power = how many animals are pushing.
+function pushBlock(b, dx, rects, power, depth) {
+  if (depth > 5 || b.need > power) return 0;
+  const probe = { x: b.x + dx, y: b.y + 1, w: b.w, h: b.h - 2 };
+  for (const o of L.blocks) if (o !== b && overlaps(probe, o)) pushBlock(o, dx, rects, power, depth + 1);
+  const x0 = b.x;
+  move(b, dx, "x", rects.filter((r) => r !== b));
+  const moved = b.x - x0;
+  if (moved) for (const o of L.blocks)
+    if (o !== b && Math.abs(o.y + o.h - b.y) < 2 && o.x < b.x + b.w && o.x + o.w > b.x) pushBlock(o, moved, rects, 9, depth + 1);
+  return moved;
+}
 // weight standing on a platform: animals count 1, crates by size (riders=true: animals only)
 function weightOn(m, ridersOnly) {
-  let w = [otter, fox, bear].filter((c) => c.ground === m && c.dead <= 0).length;
+  // lifts count anyone on or just above them (so hopping around doesn't drop the lift)
+  const above = { x: m.x, y: m.y - 30, w: m.w, h: 31 };
+  let w = [otter, fox, bear].filter((c) => c.dead <= 0 && (c.ground === m || (ridersOnly && overlaps(c, above)))).length;
   if (!ridersOnly) {
     const strip = { x: m.x, y: m.y - 3, w: m.w, h: 4 };
     L.blocks.forEach((b) => { if (overlaps(b, strip)) w += b.need; });
@@ -700,10 +759,12 @@ function updateWorld(dt, rects) {
   L.plates.forEach((p) => {
     const zone = { x: p.x + 2, y: p.y - 4, w: p.w - 4, h: 8 };
     const was = p.down;
-    p.down = bodies.some((b) => overlaps(b, zone));
+    const weight = bodies.reduce((w, b) => w + (overlaps(b, zone) ? b.need || 1 : 0), 0);
+    if (weight > 0 && weight < p.need && !p.down && toastT <= 0) toast(`This plate needs more weight (${weight}/${p.need})`, 1.2);
+    p.down = weight >= p.need;
     if (p.down && !was) { burst(p.x + 8, p.y, 4, [255, 230, 120], 25); sfx("plate"); }
     p.s.frame(p.down ? 1 : 0);
-    p.s.place(p.x + 8, p.y + 2);
+    p.s.place(p.x + p.w / 2, p.y + 2);
   });
   const groups = {};
   L.levers.forEach((l) => {
@@ -771,14 +832,20 @@ function updateWorld(dt, rects) {
     const px = b.x, py = b.y;
     const others = rects.filter((r) => r !== b);
     b.vy = Math.min(b.vy + 900 * dt, 400);
-    if (dir) move(b, dir * (b.need > 1 ? 32 : 50) * dt, "x", others);
+    if (dir) pushBlock(b, dir * (b.need > 1 ? 32 : 50) * dt, rects, dirs.filter((d) => d === dir).length, 0);
     // tip into gaps: when nothing supports the middle, snap into the gap below
     const filled = (col, row) => solidTile(col, row) || others.some((r) => overlaps({ x: col * T + 4, y: row * T + 4, w: 8, h: 8 }, r));
     const cx = Math.floor((b.x + b.w / 2) / T), below = Math.floor((b.y + b.h + 1) / T);
     // ...but never while riding a platform (a sinking pulley would otherwise shove it off)
     const onPlatform = L.movers.some((m) => b.x < m.x + m.w && b.x + b.w > m.x && m.y >= b.y + b.h - 3 && m.y <= b.y + b.h + 24);
-    if (!onPlatform && !filled(cx, below)) { let c0 = cx; while (!filled(c0 - 1, below) && cx - c0 < 4) c0--; b.x = c0 * T; }
-    if (move(b, b.vy * dt, "y", others)) {
+    if (b.grounded && !onPlatform && !filled(cx, below)) { let c0 = cx; while (!filled(c0 - 1, below) && cx - c0 < 4) c0--; b.x = c0 * T; }
+    const hitY = move(b, b.vy * dt, "y", others);
+    b.grounded = !!hitY && b.vy >= 0;
+    if (hitY === "tile") { // crates ride conveyors too
+      const u = tileAt(Math.floor((b.x + b.w / 2) / T), Math.floor((b.y + b.h + 1) / T));
+      if (u === ">" || u === "<") pushBlock(b, (u === ">" ? 30 : -30) * dt, rects, 9, 0);
+    }
+    if (hitY) {
       if (b.vy > 200) { shakeT = 0.2; sfx("thud"); burst(b.x + b.w / 2, b.y + b.h, 14, [140, 120, 90], 70); if (b.need > 1) toast("THUD! Teamwork!", 1.5); }
       b.vy = 0;
     }
@@ -791,8 +858,21 @@ function updateWorld(dt, rects) {
     b.pushers = {};
     b.s.place(b.x + b.w / 2, b.y + b.h / 2);
   });
-  const kOn = channel("K") % 2 === 1;
+  const kOn = channel("K") % 2 === 1, wOn = channel("W") % 2 === 1;
   special.forEach((sp) => {
+    if (sp.ch === "F" || sp.ch === "G") { // fans: blow everyone upward in a 3-wide column
+      const on = sp.ch === "F" ? !wOn : wOn;
+      sp.s.frame(on ? Math.floor(clock * 12) % 2 : 0);
+      sp.s.tex.setColor(new Color(255, 255, 255, on ? 255 : 120));
+      if (!on) return;
+      const col = { x: (sp.tx - 1) * T, y: (sp.ty - 9) * T, w: 3 * T, h: 9 * T };
+      [otter, fox, bear].forEach((c) => { if (overlaps(c, col)) { c.vy = Math.max(c.vy - 2600 * dt, -160); c.slam = false; } });
+      if (Math.random() < dt * 8) burst(sp.tx * T + 2 + Math.random() * 12, sp.ty * T, 1, [220, 240, 255], 4, -260);
+      return;
+    }
+    if (sp.ch === "<" || sp.ch === ">") { sp.s.frame(Math.floor(clock * 6) % 2); return; }
+    if (sp.ch === "T") { sp.s.frame(spikesUp(sp.tx) ? 0 : 1); return; }
+    if (sp.ch === "I") return;
     if (sp.ch === "r" || sp.ch === "u") {
       const want = sp.ch === "r" ? !kOn : kOn;
       if (want !== sp.solid) {
@@ -929,13 +1009,18 @@ const MENU = [
   { label: "Speech bubbles", key: "bubbles" },
   { label: "Warp red panda to otter", act: () => warpTo(fox, otter) },
   { label: "Warp otter to red panda", act: () => warpTo(otter, fox) },
-  { label: "Back to checkpoint (both)", act: () => { respawn(otter); respawn(fox); setPause(false); } },
+  { label: "Back to checkpoint (both)", act: () => { respawn(otter); respawn(fox); resetSectionBlocks(); setPause(false); } },
   { label: "Restart chapter", act: () => gotoChapter(chapter) },
   { label: "Unlock all chapters", act: () => { try { localStorage.setItem("creekside.unlocked", "6"); } catch {} unlocked = 6; toast("All chapters unlocked! Pick any from Chapter select.", 2.5); setPause(false); } },
   { label: "Swap who plays who", act: () => { setSwap(!swapPlayers); toast(`Player 1 is now the ${swapPlayers ? "red panda" : "otter"}!`, 2); setPause(false); } },
   { label: "Chapter select", act: () => { location.hash = ""; location.reload(); } },
 ];
 let menuSel = 0, prevState = "play", playTime = 0;
+// crates that started in the current section (checkpoint -> next checkpoint) go back home
+function resetSectionBlocks() {
+  const from = L.checkpoints[cpIdx].tx * T, to = (L.checkpoints[cpIdx + 1]?.tx ?? L.W) * T;
+  L.blocks.forEach((b) => { if (b.hx >= from && b.hx < to) { b.x = b.hx; b.y = b.hy; b.vy = 0; } });
+}
 // stuck? pull one animal over to the other (keeps whatever they're carrying)
 function warpTo(c, target) {
   burst(c.x + c.w / 2, c.y + c.h / 2, 14, [255, 255, 255]);
@@ -988,8 +1073,10 @@ const totalFriends = L.items.filter((i) => i.npc).length, totalBones = L.items.f
 let frameN = 0;
 function frame(dt) {
   frameN++;
+  if (state === "play") clock += Math.min(dt, 1 / 20);
   dt = Math.min(dt, 1 / 20);
   const anyStart = pressed("otter", "start") || pressed("fox", "start");
+  if (anyStart) unlockAudio();
   if (state === "splash") {
     updatePads();
     if (anyStart || pressed("otter", "jump") || pressed("fox", "jump")) {
@@ -1100,4 +1187,13 @@ emerald.run((dt) => {
   emerald.drawScene(scene, dt);
   input.update();
 });
+// test hook: pretend every puzzle is solved so a bot can check the route through a level
+window.__solveAll = () => {
+  L.gates.forEach((g) => (g.latched = true));
+  L.levers.forEach((l) => { if (l.ch !== "K" && l.ch !== "W") l.on = true; });
+  special.forEach((sp) => { if (sp.ch === "r" || sp.ch === "u") { sp.solid = true; sp.ch = "S"; } if (sp.ch === "G") sp.ch = "F"; });
+  L.movers.forEach((m) => { if (m.riders) m.riders = 1; });
+  L.grid.forEach((row, y) => row.forEach((c, x) => { if ("DBX".includes(c)) destroyTile(x, y); if (c === "u" || c === "r") row[x] = "S"; if (c === "G") row[x] = "F"; }));
+};
+window.__setCp = (i) => { cpIdx = i; respawn(otter); respawn(fox); };
 window.__game = { otter, fox, bear, L, enemies, special, input, frames: () => frameN, get state() { return state; }, get friends() { return friends; } };

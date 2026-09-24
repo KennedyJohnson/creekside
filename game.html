@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Creekside</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0f1a14; font-family: "Pixelify Sans", monospace; }
+  #game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; image-rendering: pixelated; }
+  .ui { position: fixed; pointer-events: none; color: #fff8ec; text-shadow: 0 2px 0 #2a1a12; }
+  #hint { left: 50%; bottom: 28px; transform: translateX(-50%); max-width: min(780px, 90vw); text-align: center;
+    background: rgba(42, 26, 18, .82); border: 3px solid #e8c547; padding: 10px 18px; font-size: 20px; opacity: 0; transition: opacity .2s; }
+  #toast { left: 50%; top: 52px; transform: translateX(-50%); font-size: 24px; opacity: 0; transition: opacity .25s; text-align: center; }
+  #bubble, #nbubble { left: 0; top: 0; background: #fff; color: #161616; text-shadow: none; padding: 4px 10px; border-radius: 10px; font-size: 16px; opacity: 0; transition: opacity .2s; white-space: nowrap; }
+  .show { opacity: 1 !important; }
+  .card { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(20,40,28,.75), rgba(8,14,10,.92)); color: #fff8ec; text-align: center; }
+  .card h1 { font-size: clamp(40px, 8vw, 88px); margin: 0; color: #ffd6a0; text-shadow: 0 5px 0 #6b2d1a; }
+  .card h2 { font-weight: 400; margin: 4px 0 28px; color: #bfe6c0; }
+  .card .cols { display: flex; gap: 48px; font-size: 18px; line-height: 1.6; text-align: left; }
+  .card .blink { margin-top: 32px; font-size: 26px; animation: b 1.2s infinite; }
+  @keyframes b { 50% { opacity: .3; } }
+  .hidden { display: none !important; }
+  #splash { background: radial-gradient(ellipse at 50% 35%, #ffe6b8 0%, #f7b58a 38%, #7fc7a4 70%, #3f7a4a 100%); }
+  #splash .logo { font-size: clamp(56px, 11vw, 130px); font-weight: 700; color: #fff4e0; letter-spacing: 2px;
+    text-shadow: 0 6px 0 #c2553a, 0 12px 0 #6b2d1a, 0 18px 30px rgba(0,0,0,.35); animation: bob 2.4s ease-in-out infinite; }
+  #splash .tag { font-size: clamp(18px, 2.4vw, 26px); color: #2c4a30; margin-top: 18px; }
+  #gang { display: flex; gap: 28px; align-items: flex-end; margin-top: 34px; }
+  .pal { image-rendering: pixelated; animation: hop 1.2s ease-in-out infinite; }
+  .pal:nth-child(2) { animation-delay: .15s; } .pal:nth-child(3) { animation-delay: .3s; } .pal:nth-child(4) { animation-delay: .45s; }
+  @keyframes bob { 50% { transform: translateY(-10px) rotate(-1deg); } }
+  @keyframes hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-18px); } }
+  .heartsdeco { font-size: 28px; color: #ff5d7a; margin-top: 10px; letter-spacing: 14px; }
+  .whoRow { display: flex; gap: 40px; align-items: center; }
+  .whoCard { background: rgba(255,248,236,.08); border: 3px solid #e8c547; padding: 20px 34px; text-align: center; font-size: 20px; min-width: 200px; }
+  .whoCard > div { margin-top: 10px; } .whoName { font-size: 30px; color: #ffd6a0; }
+  .swapIcon { font-size: 48px; color: #e8c547; }
+  #pause .panel { background: rgba(42, 26, 18, .92); border: 4px solid #e8c547; padding: 22px 30px; min-width: min(460px, 90vw); }
+  #pause h1 { font-size: 48px; margin-bottom: 14px; }
+  #menu div { display: flex; justify-content: space-between; gap: 30px; padding: 7px 12px; font-size: 21px; cursor: pointer; }
+  #menu div.sel { background: #e8c547; color: #2a1a12; }
+  #menu .bar { letter-spacing: 1px; }
+  #hud { left: 16px; top: 12px; font-size: 18px; opacity: .9; }
+  #timer { right: 20px; top: 12px; font-size: 34px; color: #ffd23f; opacity: 0; }
+  #chapters { display: flex; gap: 14px; margin-top: 26px; font-size: 20px; flex-wrap: wrap; justify-content: center; }
+  #chapters span { padding: 6px 12px; border: 2px solid transparent; opacity: .75; }
+  #chapters span.sel { border-color: #ffd23f; opacity: 1; color: #ffd23f; }
+  #chapters span.lock { opacity: .35; }
+  #fx { position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(20, 10, 5, .28) 100%); }
+  body.flash #fx { background: rgba(230, 240, 255, .45); }
+  body.rain::after { content: ""; position: fixed; inset: 0; pointer-events: none; background: rgba(10, 20, 40, .22); }
+  b { color: #ffd23f; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas><div id="fx"></div>
+<div id="hint" class="ui"></div>
+<div id="toast" class="ui"></div>
+<div id="bubble" class="ui"></div>
+<div id="nbubble" class="ui"></div>
+<div id="hud" class="ui"></div>
+<div id="timer" class="ui"></div>
+<div id="splash" class="card">
+  <div class="logo">Creekside</div>
+  <div class="tag">an otter &amp; red panda adventure · with Bear &amp; friends</div>
+  <div id="gang"></div>
+  <div class="heartsdeco">♥ ♥ ♥</div>
+  <div class="blink" style="color:#2a1a12">Click or press any key to start</div>
+  <div style="color:#2a1a12;margin-top:10px;opacity:.8">(one click turns the sound on for the whole session)</div>
+</div>
+<div id="who" class="card hidden">
+  <h1>Who's who?</h1>
+  <h2>◀ ▶ to swap · ✕ or Enter when you're happy</h2>
+  <div class="whoRow">
+    <div class="whoCard"><b>Player 1</b><div id="whoImg1"></div><div id="whoP1" class="whoName"></div><div id="whoC1"></div></div>
+    <div class="swapIcon">⇄</div>
+    <div class="whoCard"><b>Player 2</b><div id="whoImg2"></div><div id="whoP2" class="whoName"></div><div id="whoC2"></div></div>
+  </div>
+</div>
+<div id="pause" class="card hidden">
+  <div class="panel">
+    <h1>Paused</h1>
+    <div id="menu"></div>
+    <div style="margin-top:14px;opacity:.75;font-size:16px">↑↓ choose · ◀ ▶ adjust · ✕ select · ○ / Options / Esc resume</div>
+  </div>
+</div>
+<div id="title" class="card">
+  <h1>Creekside</h1>
+  <h2>an otter &amp; red panda adventure (with Bear 🐾)</h2>
+  <div class="cols">
+    <div><b id="p1">Otter</b><br>Move: left stick / WASD<br>Jump · swim up: ✕ / Space<br>Swipe: ○ / C<br>SLAM (mid-air): R2 / G<br>Lever · send Bear: □ / F<br>Call Bear · stay: △ / E<br>Pet Bear · ♥: L1·R1 / Q</div>
+    <div><b id="p2">Red panda</b><br>Move: left stick / ← →<br>Jump (double!): ✕ / ↑<br>Swipe: ○ / L<br>DASH: R2 / K<br>Lever · send Bear: □ / .<br>Call Bear · stay: △ / ,<br>Pet Bear · ♥: L1·R1 / /</div>
+  </div>
+  <div id="chapters"></div>
+  <div class="blink">◀ ▶ pick a chapter · ✕ or Enter to start</div>
+  <div style="margin-top:14px;opacity:.7">🔊 Click the screen or press any key to turn on sound · Options / Esc pauses</div>
+</div>
+<div id="win" class="card hidden">
+  <h1 id="winTitle">You made it home!</h1>
+  <h2 id="winSub"></h2>
+  <div class="blink" id="winNext">Press ✕ for the next chapter</div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

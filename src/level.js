@@ -2,7 +2,8 @@
 // Tiles: '#' dirt/grass, 'S' stone, 'W' water, '^' thorns, '.' air,
 //        'D' soft dirt (Bear digs), 'C' crumbly rock, 'M' bounce mushroom,
 //        'B' brambles (attack to cut), 'X' cracked rock (otter slam),
-//        'O' otter-only wall, 'P' red-panda-only wall, 'r'/'u' switch blocks (lever channel K). y grows downward.
+//        'O' otter-only wall, 'P' red-panda-only wall, 'r'/'u' switch blocks (lever channel K),
+//        'F'/'G' fans (lever channel W swaps them), '<'/'>' conveyors, 'T' timed spikes, 'I' ice. y grows downward.
 export const T = 16;
 
 function builder(W, name, sub, theme) {
@@ -16,7 +17,8 @@ function builder(W, name, sub, theme) {
   const b = {
     L, GY,
     fill(x0, y0, x1, y1, ch) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) grid[y][x] = ch; },
-    plate: (tx, ty, ch) => L.plates.push({ x: tx * T, y: ty * T + 12, w: T, h: 4, ch, down: false }),
+    // o.need = weight required (animals 1, crates 1, heavy crate 2); o.w = width in tiles
+    plate: (tx, ty, ch, o = {}) => L.plates.push({ x: tx * T, y: ty * T + 12, w: (o.w || 1) * T, h: 4, ch, down: false, need: o.need || 1 }),
     lever: (tx, ty, ch) => L.levers.push({ kind: "lever", x: tx * T, y: ty * T, w: T, h: T, ch, on: false }),
     // timed ({timer: s}) or sync ({sync: group}) push-buttons
     button: (tx, ty, ch, o = {}) => L.levers.push({ kind: "button", x: tx * T, y: ty * T, w: T, h: T, ch, on: false, t: 0, arm: 0, ...o }),
@@ -112,10 +114,10 @@ function creekside() {
 
 // ------------------------------------------------------------------ Chapter 2
 function mossyHollow() {
-  const b = builder(160, "Chapter 2 · Mossy Hollow", "Crates, digging, brambles, and a race against the clock.",
+  const b = builder(195, "Chapter 2 · Mossy Hollow", "Crates, digging, brambles, and a race against the clock.",
     { sky: ["#5fa8a0", "#bfe3d0", "#e8f0c8"], far: ["#7fb0a0", "#98c4b2"], mid: ["#3f7a4a", "#548f5a", "#2c5e38"], bg: [150, 205, 190], fireflies: true, butterflies: true, leaves: "#6fae5a" });
   const { fill, GY } = b;
-  fill(0, GY, 159, 21, "#");
+  fill(0, GY, 194, 21, "#");
   b.spawn(3); b.cp(1);
   b.sign(2, 15, "Mossy Hollow! New: crates you can push, and Bear can dig.");
   b.beetle(9, 15);
@@ -138,7 +140,7 @@ function mossyHollow() {
   b.sign(48, 15, "Brambles block the way. Swipe them with ○!");
 
   b.cp(51);
-  b.button(53, 15, "T", { timer: 4.5 });
+  b.button(53, 15, "T", { timer: 4 });
   fill(59, 14, 60, 15, "#");
   b.beetle(63, 15);
   b.gate(68, GY, "T");
@@ -150,7 +152,7 @@ function mossyHollow() {
   b.sign(71, 15, "A heavy crate. Push it together up against the ledge, then climb.");
 
   b.cp(86);
-  fill(104, 14, 112, 15, "#"); fill(106, 15, 111, 15, "."); fill(104, 15, 105, 15, "D");
+  fill(104, 14, 112, 15, "#"); fill(106, 15, 111, 15, "."); fill(104, 15, 105, 15, "D"); fill(112, 15, 112, 15, "D");
   const hazel = b.npc("HEDGEHOG", 100, 15, "Hazel", "My little hoglet wandered into the old burrow and the entrance caved in! Could your dog dig?", "My baby! Oh thank you, thank you!");
   b.item("HOGLET", 110, 15, hazel);
   b.bone(107, 15);
@@ -163,16 +165,28 @@ function mossyHollow() {
   b.beetle(137, 15); b.beetle(141, 15);
 
   b.cp(143);
-  fill(146, 16, 150, 16, "X");
-  fill(146, 17, 154, 19, ".");
-  b.exit(152, 20);
-  b.sign(144, 15, "Home is down in the hollow, under this cracked rock. Otter: jump, then R2 to SLAM!");
+  // conveyor gauntlet: the belt drags you back while spikes pop up and down
+  fill(147, 16, 158, 16, "<");
+  fill(150, 15, 150, 15, "T"); fill(153, 15, 153, 15, "T"); fill(156, 15, 156, 15, "T");
+  b.sign(145, 15, "A conveyor belt that pulls you backward, and spikes that pop up and down. Time it!");
+  b.beetle(162, 15);
+  b.cp(160);
+  b.heavy(163, 15);
+  b.plate(170, 15, "H", { need: 2, w: 2 });
+  fill(172, 15, 172, 15, "S");
+  b.gate(175, GY, "H");
+  b.sign(161, 15, "A heavy plate (red) needs lots of weight. What's the heaviest thing around?");
+  b.cp(177);
+  fill(180, 16, 184, 16, "X");
+  fill(180, 17, 188, 19, ".");
+  b.exit(186, 20);
+  b.sign(178, 15, "Home is down in the hollow, under this cracked rock. Otter: jump, then R2 to SLAM!");
   return b.L;
 }
 
 // ------------------------------------------------------------------ Chapter 3
 function windyRidge() {
-  const b = builder(182, "Chapter 3 · Windy Ridge", "Bouncy mushrooms, moving logs, crumbly rocks and a doggy door.",
+  const b = builder(212, "Chapter 3 · Windy Ridge", "Bouncy mushrooms, moving logs, crumbly rocks and a doggy door.",
     { sky: ["#f08a5d", "#f9c38b", "#fde9c9"], far: ["#c98a9a", "#dca2ac"], mid: ["#8a6a7a", "#a07f8a", "#6a4f5f"], bg: [245, 190, 150], leaves: "#e8963c", wind: 1, birds: true });
   const { fill, GY } = b;
   fill(0, GY, 30, 21, "#");
@@ -215,7 +229,8 @@ function windyRidge() {
   b.cp(116);
   fill(119, 11, 121, 11, "S");
   b.sign(118, 15, "Something orange is stuck on that high ledge. Stack up!");
-  b.mover({ x0: 126 * T, y0: 15 * T + 8, x1: 126 * T, y1: 8 * T, w: 3 * T, speed: 30 });
+  fill(126, 16, 128, 16, ".");
+  b.mover({ x0: 126 * T, y0: 16 * T, x1: 126 * T, y1: 8 * T, w: 3 * T, speed: 30 });
   fill(129, 8, 141, 15, "#");
   b.sign(124, 15, "This log goes up and down on its own. Time your jump!");
   b.beetle(135, 7);
@@ -226,16 +241,29 @@ function windyRidge() {
   b.item("CARROT", 120, 10, clover);
   fill(159, 11, 160, 15, "#"); fill(161, 13, 162, 15, "#");
   b.cp(164);
-  b.exit(172, GY);
+  // updraft canyon: two sets of fans; a lever on each side swaps which set blows
+  fill(170, 16, 189, 21, ".");
+  b.lever(166, 15, "W");
+  fill(171, 17, 171, 21, "#"); fill(171, 16, 171, 16, "F");
+  fill(175, 17, 175, 21, "#"); fill(175, 16, 175, 16, "F");
+  fill(178, 12, 180, 12, "S");
+  fill(183, 17, 183, 21, "#"); fill(183, 16, 183, 16, "G");
+  fill(187, 17, 187, 21, "#"); fill(187, 16, 187, 16, "G");
+  fill(190, 13, 211, 21, "#");
+  fill(168, 16, 169, 16, "#");
+  b.lever(192, 12, "W");
+  b.sign(165, 15, "Updrafts! Ride the gray fans to the ledge, then have your partner flip the lever for the blue ones.");
+  b.cp(193);
+  b.exit(203, 13);
   return b.L;
 }
 
 // ------------------------------------------------------------------ Chapter 4
 function stormyFalls() {
-  const b = builder(175, "Chapter 4 · Stormy Falls", "Everything you've learned, all at once. Stay close.",
+  const b = builder(205, "Chapter 4 · Stormy Falls", "Everything you've learned, all at once. Stay close.",
     { sky: ["#2e3a4a", "#56687a", "#8394a3"], far: ["#3e4c5a", "#4e5e6c"], mid: ["#2f4a3a", "#3c5a48", "#22382c"], bg: [60, 74, 90], rain: true, fireflies: true, lightning: true });
   const { fill, GY } = b;
-  fill(0, GY, 174, 21, "#");
+  fill(0, GY, 204, 21, "#");
   b.spawn(3); b.cp(1);
   b.sign(4, 15, "Stormy Falls. Everything you've learned, all at once. You've got this, you two ♥");
 
@@ -296,10 +324,17 @@ function stormyFalls() {
   b.sign(144, 15, "Grab the key. Then one of you bounces up to the high button, and you press together!");
 
   b.cp(158);
-  fill(162, 16, 166, 16, "X");
-  fill(162, 17, 170, 19, ".");
-  b.exit(168, 20);
-  b.sign(160, 15, "The den is under the cracked rock. Otter, SLAM! (Don't forget the key.)");
+  // storm drain: a belt shoving you toward thorns while spikes pop in a wave
+  fill(160, 16, 176, 16, ">");
+  fill(177, 16, 178, 18, "."); fill(177, 18, 178, 18, "^");
+  fill(163, 15, 163, 15, "T"); fill(168, 15, 168, 15, "T"); fill(173, 15, 173, 15, "T");
+  b.beetle(174, 15);
+  b.sign(159, 15, "The storm drain! The belt shoves you toward a thorn pit. Dodge the spikes, then leap!");
+  b.cp(181);
+  fill(184, 16, 188, 16, "X");
+  fill(184, 17, 192, 19, ".");
+  b.exit(190, 20);
+  b.sign(182, 15, "The den is under the cracked rock. Otter, SLAM! (Don't forget the key.)");
   return b.L;
 }
 
@@ -307,20 +342,20 @@ export const LEVELS = [creekside, mossyHollow, windyRidge, stormyFalls];
 
 // ------------------------------------------------------------------ Chapter 5
 function lanternCaves() {
-  const b = builder(170, "Chapter 5 · Lantern Caves", "Color walls, weighted pulleys and switch blocks. Think before you leap!",
+  const b = builder(200, "Chapter 5 · Lantern Caves", "Color walls, weighted pulleys and switch blocks. Think before you leap!",
     { sky: ["#1b1426", "#2e2140", "#3d2b4d"], far: ["#2a2036", "#352842"], mid: ["#3a2c46", "#46354f", "#2a2036"], bg: [30, 22, 40], fireflies: true, dark: true });
   const { fill, GY } = b;
-  fill(0, GY, 169, 21, "#");
-  fill(0, 0, 169, 2, "S");
+  fill(0, GY, 199, 21, "#");
+  fill(0, 0, 199, 2, "S");
   b.spawn(3); b.cp(1);
   b.sign(2, 15, "Lantern Caves! Glowing walls only let ONE of you through: brown = otter, red = red panda.");
 
   // color walls: each of you holds a plate for the other
-  fill(12, 14, 13, 15, "#");
+  fill(12, 14, 13, 14, "#"); // floating step: walk under it to the gate
   fill(14, 3, 14, 13, "P");
   b.gate(14, GY, "A", { pillar: false, rows: 2 });
   b.plate(18, 15, "A");
-  fill(22, 14, 23, 15, "#");
+  fill(22, 14, 23, 14, "#");
   fill(24, 3, 24, 13, "O");
   b.gate(24, GY, "B", { pillar: false, rows: 2 });
   b.plate(28, 15, "B");
@@ -346,7 +381,8 @@ function lanternCaves() {
 
   // two-seat lift
   b.cp(83);
-  b.mover({ x0: 103 * T, y0: 15 * T + 8, x1: 103 * T, y1: 6 * T, w: 3 * T, riders: 2, speed: 35 });
+  fill(103, 16, 105, 16, ".");
+  b.mover({ x0: 103 * T, y0: 16 * T, x1: 103 * T, y1: 6 * T, w: 3 * T, riders: 2, speed: 35 });
   fill(106, 6, 125, 15, "#");
   b.sign(99, 15, "This lift only rises with two riders aboard.");
   b.beetle(112, 5);
@@ -355,27 +391,39 @@ function lanternCaves() {
 
   // otter-only pocket with the key, then a synced color-wall gate
   b.cp(127);
-  fill(134, 3, 134, 15, "O"); fill(139, 3, 139, 15, "S");
-  b.item("KEY", 137, 15);
-  b.bone(136, 15);
-  fill(143, 14, 144, 15, "#");
+  // otter-only shelf room above a low tunnel everyone can walk through
+  fill(134, 3, 134, 13, "O"); fill(139, 3, 139, 13, "S"); fill(134, 14, 139, 14, "S");
+  b.item("KEY", 137, 13);
+  b.bone(136, 13);
+  fill(132, 14, 133, 14, "#");
+  fill(143, 14, 144, 14, "#");
   fill(145, 3, 145, 13, "P");
   b.gate(145, GY, "Z", { pillar: false, rows: 2, latch: true });
   b.button(141, 15, "Z", { sync: "Z" });
   b.button(148, 15, "Z", { sync: "Z" });
   b.sign(132, 15, "The key is behind an otter wall. Then: one button on each side of the red wall, pressed together!");
   b.cp(150);
-  b.beetle(154, 15);
-  b.exit(160, GY);
+  // ice cave: slippery floor over thorn slots, then a two-crate heavy plate
+  fill(152, 16, 175, 16, "I");
+  fill(157, 16, 157, 16, "^"); fill(163, 16, 164, 16, "^"); fill(170, 16, 170, 16, "^");
+  b.sign(151, 15, "Ice! You'll slide. Hop the thorn slots, and don't overshoot.");
+  b.beetle(167, 15);
+  b.cp(177);
+  b.crate(178, 15); b.crate(180, 15);
+  b.plate(186, 15, "Q", { need: 2, w: 2 });
+  fill(188, 15, 188, 15, "S");
+  b.gate(191, GY, "Q");
+  b.sign(179, 15, "A heavy plate (red). Two crates side by side should do it... push them together!");
+  b.exit(195, GY);
   return b.L;
 }
 
 // ------------------------------------------------------------------ Chapter 6
 function starrySummit() {
-  const b = builder(170, "Chapter 6 · Starry Summit", "The final climb. Every trick you know, together, under the stars.",
+  const b = builder(205, "Chapter 6 · Starry Summit", "The final climb. Every trick you know, together, under the stars.",
     { sky: ["#0e1a3a", "#2b3f73", "#6a6fa8"], far: ["#2b3658", "#39466b"], mid: ["#1f2f4a", "#2a3d5c", "#16233a"], bg: [20, 30, 60], fireflies: true, stars: true });
   const { fill, GY } = b;
-  fill(0, GY, 169, 21, "#");
+  fill(0, GY, 204, 21, "#");
   b.spawn(3); b.cp(1);
   b.sign(2, 15, "Starry Summit. The last climb! Stick together.");
 
@@ -388,13 +436,14 @@ function starrySummit() {
 
   // everyone aboard
   b.cp(33);
-  b.mover({ x0: 37 * T, y0: 15 * T + 8, x1: 37 * T, y1: 8 * T, w: 3 * T, riders: 3, speed: 30 });
+  fill(37, 16, 39, 16, ".");
+  b.mover({ x0: 37 * T, y0: 16 * T, x1: 37 * T, y1: 8 * T, w: 3 * T, riders: 3, speed: 30 });
   fill(40, 8, 57, 21, "#");
   b.sign(35, 15, "Everyone aboard! This lift needs all three of you. Tell Bear to stay on it (△ twice).");
 
   // synced buttons across a red-panda wall
   b.cp(41);
-  fill(47, 6, 48, 7, "#");
+  fill(47, 6, 48, 6, "#");
   fill(49, 0, 49, 5, "P");
   b.gate(49, 8, "Z", { pillar: false, rows: 2, latch: true });
   b.button(45, 7, "Z", { sync: "Z" });
@@ -416,14 +465,22 @@ function starrySummit() {
   b.heavy(113, 15);
   fill(116, 16, 121, 21, ".");
   b.pulley(116, 119, 16, 8 * T);
-  fill(122, 8, 169, 21, "#");
+  fill(122, 8, 165, 21, "#");
   b.sign(111, 15, "The summit! Push the heavy crate onto the left platform, add Bear... then hop on the right one together.");
 
   b.cp(124);
-  b.beetle(132, 7); b.beetle(140, 7);
   b.bone(126, 7);
-  b.npc("RIGBY", 155, 7, "Rigby", "ARF! You made it to the top! Bear told me ALL about you two!", "ARF! You made it to the top! Bear told me ALL about you two!");
-  b.exit(160, 8);
+  // icy ridge with timed spikes and beetles, then a fan up to the peak
+  fill(128, 8, 158, 8, "I");
+  fill(134, 7, 134, 7, "T"); fill(141, 7, 141, 7, "T"); fill(148, 7, 148, 7, "T");
+  b.beetle(138, 7); b.beetle(152, 7);
+  b.sign(127, 7, "The icy ridge! Slippery, spiky, and the beetles don't slip at all.");
+  fill(163, 7, 163, 7, "F");
+  fill(166, 4, 204, 21, "#");
+  b.sign(161, 7, "One last updraft, up to the peak!");
+  b.cp(168);
+  b.npc("RIGBY", 190, 3, "Rigby", "ARF! You made it to the top! Bear told me ALL about you two!", "ARF! You made it to the top! Bear told me ALL about you two!");
+  b.exit(196, 4);
   return b.L;
 }
 

@@ -552,3 +552,61 @@ export const FLAG = strip([
   ["k.......", "k.......", "k.......", "k.......", "k.......", "k.......", "krr.....", "krrrr...", "krrrrrr.", "krrrr...", "krr.....", "kk......"],
   ["krrr....", "krggggg.", "krgwwgg.", "krggggg.", "krrr....", "k.......", "k.......", "k.......", "k.......", "k.......", "k.......", "kk......"],
 ], { k: "#4b3322", r: "#8a5a33", g: "#5fd35f", w: "#ffffff" });
+
+// ---------- new mechanic tiles (multi-frame) ----------
+function framesArt(w, h, fns) {
+  const c = canvas(w * fns.length, h), g = c.getContext("2d");
+  fns.forEach((fn, i) => { g.save(); g.translate(i * w, 0); fn(g, rng(7 + i)); g.restore(); });
+  return { url: c.toDataURL(), w, h, n: fns.length };
+}
+function fanFrame(blade, body) {
+  return (g) => {
+    g.fillStyle = "#3a3f48"; g.fillRect(0, 4, 16, 12);
+    g.fillStyle = body; g.fillRect(1, 5, 14, 10);
+    g.fillStyle = "#2a2e35"; g.fillRect(3, 7, 10, 6);
+    g.fillStyle = blade;
+    if (g.__f) {}
+    return;
+  };
+}
+export const FAN = framesArt(16, 16, [0, 1].map((f) => (g) => {
+  g.fillStyle = "#3a3f48"; g.fillRect(0, 3, 16, 13);
+  g.fillStyle = "#8a929c"; g.fillRect(1, 4, 14, 11);
+  g.fillStyle = "#2a2e35"; g.fillRect(2, 5, 12, 6);
+  g.fillStyle = "#dfe6ee";
+  if (f === 0) { g.fillRect(3, 7, 10, 2); } else { g.fillRect(7, 5, 2, 6); }
+  g.fillStyle = "#bfe6ff"; g.fillRect(4, 0, 1, 2); g.fillRect(8, 1, 1, 2); g.fillRect(11, 0, 1, 2);
+}));
+export const FAN_B = framesArt(16, 16, [0, 1].map((f) => (g) => {
+  g.fillStyle = "#1a3a5a"; g.fillRect(0, 3, 16, 13);
+  g.fillStyle = "#4aa3e2"; g.fillRect(1, 4, 14, 11);
+  g.fillStyle = "#12263a"; g.fillRect(2, 5, 12, 6);
+  g.fillStyle = "#dff2ff";
+  if (f === 0) { g.fillRect(3, 7, 10, 2); } else { g.fillRect(7, 5, 2, 6); }
+  g.fillStyle = "#bfe6ff"; g.fillRect(4, 0, 1, 2); g.fillRect(8, 1, 1, 2); g.fillRect(11, 0, 1, 2);
+}));
+function convFrames(dir) {
+  return framesArt(16, 16, [0, 1].map((f) => (g) => {
+    g.fillStyle = "#2b2f36"; g.fillRect(0, 0, 16, 16);
+    g.fillStyle = "#4a515b"; g.fillRect(0, 1, 16, 5);
+    g.fillStyle = "#ffd23f";
+    for (let i = 0; i < 3; i++) {
+      const x = ((i * 6 + f * 3 * dir) % 18 + 18) % 18 - 1;
+      if (dir > 0) { g.fillRect(x, 2, 2, 1); g.fillRect(x + 1, 3, 2, 1); g.fillRect(x, 4, 2, 1); }
+      else { g.fillRect(x + 1, 2, 2, 1); g.fillRect(x, 3, 2, 1); g.fillRect(x + 1, 4, 2, 1); }
+    }
+    g.fillStyle = "#6b7380"; g.beginPath(); g.arc(3, 11, 2, 0, 7); g.arc(13, 11, 2, 0, 7); g.fill();
+  }));
+}
+export const CONV_R = convFrames(1);
+export const CONV_L = convFrames(-1);
+export const SPIKES = framesArt(16, 16, [
+  (g) => { for (let i = 0; i < 4; i++) { g.fillStyle = "#9aa3ad"; g.beginPath(); g.moveTo(i * 4, 16); g.lineTo(i * 4 + 2, 4); g.lineTo(i * 4 + 4, 16); g.fill(); g.fillStyle = "#e8eef4"; g.fillRect(i * 4 + 2, 4, 1, 3); } },
+  (g) => { g.fillStyle = "#5c6470"; for (let i = 0; i < 4; i++) g.fillRect(i * 4 + 1, 14, 2, 2); },
+]);
+export const ICE = tileArt((g, r) => {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { g.fillStyle = r() < 0.1 ? "#a8d8f0" : "#c8ecfb"; g.fillRect(x, y, 1, 1); }
+  g.fillStyle = "#ffffff"; g.fillRect(0, 0, 16, 2); g.fillRect(3, 5, 4, 1); g.fillRect(9, 9, 5, 1);
+  g.fillStyle = "#7fbfdf"; g.fillRect(0, 15, 16, 1);
+});
+export const DROP = strip([["w", "w", "w", "w"]], { w: "#cfe3ff" });

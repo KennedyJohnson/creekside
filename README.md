@@ -30,6 +30,9 @@ Progress is saved in your browser, so finished chapters unlock the next one.
 - **Together**: stand close and press L1/R1 to cuddle (the otter can gift their pebble!), stand still side by side to hold paws, or press it alone to roll over.
 - **Bear**: follows whoever called him last, sits and stays on plates, digs through soft dirt, fits through doggy doors, is scared of water, and LOVES bones (find them and bring them to him). Loves pets.
 
+## Mechanics
+Pressure plates (red ones need extra weight), levers, timed and synced buttons, crates you can push in a row, heavy crates for two, pulleys, lifts that need riders, color walls only one animal can pass, switch blocks, fans that blow you upward, conveyor belts, spikes on a rhythm, ice, crumbling rocks, bounce mushrooms, brambles, cracked rock, and Bear's digging and doggy doors.
+
 ## Chapters
 1. **Creekside**: pressure plates, the creek lever, stacking to climb a cliff, a boulder you push together, three plates at once, and a key.
    *Help Mama Duck find her duckling.*
@@ -45,7 +48,7 @@ Progress is saved in your browser, so finished chapters unlock the next one.
    *Return Pippa the goat's kid, then meet Rigby at the top.*
 
 ## Sound
-Chiptune music and sound effects are synthesized live with the Web Audio API. Click or press a key once to enable sound (browsers require it); M mutes.
+Chiptune music and sound effects are synthesized live with the Web Audio API. Click or press a key once on the start screen to turn sound on for the whole session (browsers require one click or key press); M mutes.
 
 ## Development
 Every push to `master` is built and deployed to GitHub Pages automatically by `.github/workflows/pages.yml`.
