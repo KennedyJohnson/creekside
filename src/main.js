@@ -3,6 +3,7 @@ import {
 } from "emeraldengine";
 import * as ART from "./art.js";
 import { LEVELS, T } from "./level.js";
+import { initAudio, sfx, playMusic, toggleMute, vol, applyVolume } from "./audio.js";
 
 // ---------- Chapter selection (#c=2&go skips the title) ----------
 const hp = new URLSearchParams(location.hash.slice(1));
@@ -118,27 +119,48 @@ denS.place(L.exit.x + L.exit.w / 2, L.exit.y + L.exit.h - 20);
 
 // ---------- Input ----------
 const input = new InputManager();
-const bind = (who, keys) => { for (const [act, list] of Object.entries(keys)) input.mapAction(`${who}.${act}`, list); };
-bind("otter", {
-  left: ["a", "KeyA", "pad:0:dpadLeft"], right: ["d", "KeyD", "pad:0:dpadRight"],
-  up: ["w", "KeyW", "pad:0:dpadUp"], down: ["s", "KeyS", "pad:0:dpadDown"],
-  jump: [" ", "Space", "pad:0:south"], use: ["f", "KeyF", "pad:0:west"],
-  attack: ["c", "KeyC", "pad:0:east"], special: ["g", "KeyG", "pad:0:r2", "pad:0:l2"],
-  call: ["e", "KeyE", "pad:0:north"], love: ["q", "KeyQ", "pad:0:r1", "pad:0:l1"],
-  reset: ["r", "KeyR", "pad:0:share"], start: ["Enter", "pad:0:south", "pad:0:options"],
-});
-bind("fox", {
-  left: ["ArrowLeft", "pad:1:dpadLeft"], right: ["ArrowRight", "pad:1:dpadRight"],
-  up: ["pad:1:dpadUp"], down: ["ArrowDown", "pad:1:dpadDown"],
-  jump: ["ArrowUp", "pad:1:south"], use: [".", "Period", "pad:1:west"],
-  attack: ["l", "KeyL", "pad:1:east"], special: ["k", "KeyK", "pad:1:r2", "pad:1:l2"],
-  call: [",", "Comma", "pad:1:north"], love: ["/", "Slash", "pad:1:r1", "pad:1:l1"],
-  reset: ["pad:1:share"], start: ["pad:1:south", "pad:1:options"],
-});
+const MENU_KEYS = {
+  mUp: ["ArrowUp", "w", "KeyW", "dpadUp"], mDown: ["ArrowDown", "s", "KeyS", "dpadDown"],
+  mLeft: ["ArrowLeft", "a", "KeyA", "dpadLeft"], mRight: ["ArrowRight", "d", "KeyD", "dpadRight"],
+  mOk: ["Enter", " ", "Space", "south"], mBack: ["east"],
+};
+const KEYS = {
+  otter: {
+    left: ["a", "KeyA", "dpadLeft"], right: ["d", "KeyD", "dpadRight"], up: ["w", "KeyW", "dpadUp"], down: ["s", "KeyS", "dpadDown"],
+    jump: [" ", "Space", "south"], use: ["f", "KeyF", "west"], attack: ["c", "KeyC", "east"], special: ["g", "KeyG", "r2", "l2"],
+    call: ["e", "KeyE", "north"], love: ["q", "KeyQ", "r1", "l1"], reset: ["r", "KeyR", "share"], start: ["Enter", "south", "options"], pause: ["options"],
+    ...MENU_KEYS,
+  },
+  fox: {
+    left: ["ArrowLeft", "dpadLeft"], right: ["ArrowRight", "dpadRight"], up: ["dpadUp"], down: ["ArrowDown", "dpadDown"],
+    jump: ["ArrowUp", "south"], use: [".", "Period", "west"], attack: ["l", "KeyL", "east"], special: ["k", "KeyK", "r2", "l2"],
+    call: [",", "Comma", "north"], love: ["/", "Slash", "r1", "l1"], reset: ["share"], start: ["south", "options"], pause: ["options"],
+    ...MENU_KEYS,
+  },
+};
+const PAD_NAMES = new Set(["dpadLeft", "dpadRight", "dpadUp", "dpadDown", "south", "west", "east", "north", "r1", "l1", "r2", "l2", "share", "options"]);
+// Controllers are assigned in connection order, so a pad that Chrome reports as
+// index 1/2/3 (e.g. after a reconnect) still becomes player 1 or 2.
+const padFor = { otter: 0, fox: 1 };
+let padKey = null;
+function bindPads() {
+  const pads = [...(navigator.getGamepads?.() || [])].filter(Boolean).map((g) => g.index).sort((a, b) => a - b);
+  const key = pads.join(",");
+  if (key === padKey) return;
+  padKey = key;
+  padFor.otter = pads[0] ?? 0; padFor.fox = pads[1] ?? (pads[0] === 1 ? 0 : 1);
+  for (const who of ["otter", "fox"])
+    for (const [act, list] of Object.entries(KEYS[who]))
+      input.mapAction(`${who}.${act}`, list.map((t) => (PAD_NAMES.has(t) ? `pad:${padFor[who]}:${t}` : t)));
+}
+bindPads();
+window.addEventListener("gamepadconnected", bindPads);
+window.addEventListener("gamepaddisconnected", bindPads);
 let edgeOff = false;
 const pressed = (who, a) => !edgeOff && input.justPressed(`${who}.${a}`);
 const held = (who, a) => input.isDown(`${who}.${a}`);
-function stick(who, pad) {
+function stick(who) {
+  const pad = padFor[who];
   let x = (held(who, "right") ? 1 : 0) - (held(who, "left") ? 1 : 0);
   let y = (held(who, "down") ? 1 : 0) - (held(who, "up") ? 1 : 0);
   if (input.isGamepadConnected?.(pad)) {
@@ -149,12 +171,31 @@ function stick(who, pad) {
   return { x, y };
 }
 
+// ---------- Settings (saved in the browser) ----------
+const settings = { music: 0.6, sfx: 0.8, shake: true, hints: true, bubbles: true };
+try { Object.assign(settings, JSON.parse(localStorage.getItem("creekside.settings") || "{}")); } catch {}
+const saveSettings = () => { try { localStorage.setItem("creekside.settings", JSON.stringify(settings)); } catch {} };
+function syncAudio() { vol.music = settings.music; vol.sfx = settings.sfx; applyVolume(); }
+syncAudio();
+
+// ---------- Audio (needs a click or key press to start) ----------
+const unlockAudio = () => { initAudio(); syncAudio(); };
+window.addEventListener("keydown", (e) => {
+  unlockAudio();
+  if (e.key === "m" || e.key === "M") toast(toggleMute() ? "🔇 Sound off (M)" : "🔊 Sound on (M)", 1.5);
+});
+window.addEventListener("pointerdown", unlockAudio);
+playMusic(chapter);
+
 // ---------- HUD (DOM overlay) ----------
 const $ = (id) => document.getElementById(id);
-const hintEl = $("hint"), toastEl = $("toast"), bubbleEl = $("bubble"), hudEl = $("hud"), timerEl = $("timer");
+const hintEl = $("hint"), toastEl = $("toast"), bubbleEl = $("bubble"), nBubbleEl = $("nbubble"), hudEl = $("hud"), timerEl = $("timer");
 let toastT = 0, bubbleT = 0;
 function toast(msg, t = 2.5) { toastEl.textContent = msg; toastEl.classList.add("show"); toastT = t; }
-function bubble(msg) { bubbleEl.textContent = msg; bubbleEl.classList.add("show"); bubbleT = 1.6; }
+function bubble(msg) { if (!settings.bubbles) return; bubbleEl.textContent = msg; bubbleEl.classList.add("show"); bubbleT = 1.6; }
+let nBubbleT = 0, nBubbleNpc = null;
+function npcBubble(n, msg) { if (!settings.bubbles) return; nBubbleEl.textContent = msg; nBubbleEl.classList.add("show"); nBubbleT = 1.6; nBubbleNpc = n; }
+const NAME = { otter: "otter", fox: "red panda" };
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 // ---------- Particles, hearts ----------
@@ -175,6 +216,75 @@ function heart(x, y) {
 }
 let shakeT = 0;
 
+// ---------- Ambient eye candy ----------
+const ambient = [];
+function pool(art, n, z, init) { for (let i = 0; i < n; i++) ambient.push({ s: sprite(art, z), life: 0, kind: init }); }
+if (TH.leaves) pool(ART.LEAF, 18, 6, "leaf");
+if (TH.butterflies) pool(ART.BUTTERFLY, 6, 2, "butterfly");
+if (TH.fireflies) pool(ART.PIXEL, 26, 6, "firefly");
+if (TH.birds) pool(ART.BIRD, 4, -45, "bird");
+pool(ART.PIXEL, 14, 6, "sparkle");
+const clouds = TH.rain ? [] : [0, 1, 2, 3, 4].map((i) => ({ s: sprite(ART.cloud(i + 3), -55), x: Math.random() * LW, y: 20 + Math.random() * 90, v: 3 + Math.random() * 5 }));
+const waterTops = [];
+for (let ty = 1; ty < L.H; ty++) for (let tx = 0; tx < L.W; tx++) if (L.grid[ty][tx] === "W" && L.grid[ty - 1][tx] !== "W") waterTops.push([tx, ty]);
+const tint = (s, rgb) => s.tex.setColor(new Color(...rgb));
+let flashT = 0;
+function spawnAmbient(a) {
+  const left = camX - viewW / 2, top = camY - viewH / 2;
+  a.t = 0; a.ph = Math.random() * 6.28;
+  if (a.kind === "leaf") {
+    Object.assign(a, { x: left + Math.random() * viewW * 1.2, y: top - 10, vx: -(10 + Math.random() * 15) * (TH.wind ? 3 : 1), vy: 12 + Math.random() * 10, life: 12 });
+    const base = TH.leaves.match(/\w\w/g).map((h) => parseInt(h, 16));
+    tint(a.s, base.map((c) => Math.min(255, c + Math.floor((Math.random() - 0.5) * 60))));
+  } else if (a.kind === "butterfly") {
+    Object.assign(a, { x: left + Math.random() * viewW, y: top + viewH * (0.3 + Math.random() * 0.4), vx: (Math.random() - 0.5) * 30, vy: 0, life: 10 });
+    tint(a.s, [[255, 170, 200], [255, 230, 110], [170, 210, 255], [255, 255, 255]][Math.floor(Math.random() * 4)]);
+  } else if (a.kind === "firefly") {
+    Object.assign(a, { x: left + Math.random() * viewW, y: top + viewH * (0.35 + Math.random() * 0.6), vx: 0, vy: 0, life: 5 + Math.random() * 5 });
+    tint(a.s, [255, 240, 140]);
+  } else if (a.kind === "bird") {
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    Object.assign(a, { x: dir > 0 ? left - 20 : left + viewW + 20, y: top + 15 + Math.random() * 50, vx: dir * (35 + Math.random() * 20), vy: 0, life: 14 });
+    a.s.flip(dir < 0);
+  } else if (a.kind === "sparkle") {
+    const vis = waterTops.filter(([tx]) => tx * T > left && tx * T < left + viewW);
+    if (!vis.length) { a.life = 0.5; a.x = -1e5; return; }
+    const [tx, ty] = vis[Math.floor(Math.random() * vis.length)];
+    Object.assign(a, { x: tx * T + Math.random() * T, y: ty * T + 1 + Math.random() * 3, vx: 0, vy: 0, life: 0.4 + Math.random() * 0.5 });
+    tint(a.s, [255, 255, 255]);
+  }
+}
+function updateAmbient(dt) {
+  ambient.forEach((a) => {
+    a.life -= dt; a.t = (a.t || 0) + dt;
+    if (a.life <= 0) {
+      if (a.kind === "bird" && Math.random() > dt * 0.25) { a.s.hide(); return; }
+      if (a.kind === "sparkle" && Math.random() > dt * 3) { a.s.hide(); return; }
+      spawnAmbient(a);
+    }
+    if (a.kind === "leaf") { a.x += (a.vx + Math.sin(a.t * 2 + a.ph) * 12) * dt; a.y += a.vy * dt; a.s.frame(Math.floor(a.t * 3 + a.ph) % 2); }
+    else if (a.kind === "butterfly") { a.x += (a.vx + Math.sin(a.t * 1.3 + a.ph) * 18) * dt; a.y += Math.sin(a.t * 2.1 + a.ph) * 14 * dt; a.s.frame(Math.floor(a.t * 8) % 2); a.s.flip(a.vx < 0); }
+    else if (a.kind === "firefly") {
+      a.x += Math.sin(a.t * 0.7 + a.ph) * 8 * dt; a.y += Math.cos(a.t * 0.9 + a.ph) * 6 * dt;
+      const glow = 0.5 + 0.5 * Math.sin(a.t * 3 + a.ph);
+      a.s.tex.setColor(new Color(255, 240, 140, Math.round(60 + 195 * glow)));
+    } else if (a.kind === "bird") { a.x += a.vx * dt; a.y += Math.sin(a.t * 2) * 4 * dt; a.s.frame(Math.floor(a.t * 5) % 2); }
+    else if (a.kind === "sparkle") a.s.tex.setColor(new Color(255, 255, 255, Math.round(255 * Math.min(1, a.life * 3))));
+    a.s.place(a.x, a.y);
+  });
+  clouds.forEach((c) => {
+    c.x += c.v * dt;
+    if (c.x > LW + 100) c.x = -100;
+    const span = viewW + 160, rel = (((c.x - camX * 0.15) % span) + span) % span;
+    c.s.place(camX - viewW / 2 - 80 + rel, camY - viewH / 2 + c.y * 0.6 + 10);
+  });
+  if (TH.lightning) {
+    if (flashT <= 0 && Math.random() < dt * 0.05) { flashT = 0.35; setTimeout(() => sfx("thud"), 400); }
+    if (flashT > 0) flashT -= dt;
+    document.body.classList.toggle("flash", flashT > 0.2 || (flashT > 0 && flashT < 0.1));
+  }
+}
+
 // ---------- Characters ----------
 function makeChar(kind, art, w, h, pad, z) {
   return { kind, art, s: sprite(art, z), w, h, pad, x: 0, y: 0, vx: 0, vy: 0, onGround: false, ground: null,
@@ -182,6 +292,7 @@ function makeChar(kind, art, w, h, pad, z) {
     atk: 0, atkCd: 0, dash: 0, dashCd: 0, canDash: true, slam: false, swipe: sprite(ART.SWIPE, 6) };
 }
 const otter = makeChar("otter", ART.OTTER, 14, 11, 0, 3);
+otter.pebble = sprite(ART.PEBBLE, 4); otter.idle = 0; // otters keep a favourite pebble and juggle it
 const fox = makeChar("fox", ART.FOX, 12, 13, 1, 2);
 const bear = makeChar("bear", ART.BEAR, 14, 12, -1, 1);
 Object.assign(bear, { mode: "follow", target: otter, stuck: 0, dig: 0, sendJumps: 0, blockT: 0, petT: 0 });
@@ -195,7 +306,7 @@ const SPEC = {
 let cpIdx = 0;
 function spawnAt(c, tx) { c.x = tx * T + 1; c.y = groundY(tx) - c.h; c.vx = c.vy = 0; c.ground = null; c.dash = 0; c.slam = false; }
 function respawn(c) {
-  const tx = L.checkpoints[cpIdx].tx + (c === otter ? 0 : c === fox ? 2 : 4);
+  const tx = L.checkpoints[cpIdx].tx + (c === otter ? 0 : c === fox ? 1 : 2);
   burst(c.x + c.w / 2, c.y + c.h / 2, 14, [255, 255, 255]);
   spawnAt(c, tx);
   c.dead = 0.8;
@@ -265,6 +376,7 @@ function physicsStep(c, dt, wantX, rects) {
   if (hy) {
     c.vy = 0;
     if (vyWas > 0) {
+      if (c.isChar && vyWas > 180 && !c.onGround) burst(c.x + c.w / 2, c.y + c.h, 4, [230, 215, 190], 25, 60);
       c.onGround = true; c.ground = hy === "tile" ? null : hy; c.air = 0; c.canDash = true;
       if (c.slam) slamImpact(c);
       if (hy === "tile") landedOnTiles(c);
@@ -280,7 +392,7 @@ function landedOnTiles(c) {
     if (sp && sp.ch === "C" && !sp.broken && sp.t === 0) sp.t = 0.001;
   }
   if (c.isChar && tileUnder(c, 0.5) === "M") { // bounce mushroom
-    c.vy = -430; c.onGround = false; c.air = 0;
+    c.vy = -430; c.onGround = false; c.air = 0; sfx("bounce");
     burst(c.x + c.w / 2, c.y + c.h, 8, [255, 120, 130], 40);
   }
 }
@@ -288,6 +400,7 @@ function landedOnTiles(c) {
 function slamImpact(c) {
   c.slam = false;
   shakeT = 0.25;
+  sfx("slam");
   burst(c.x + c.w / 2, c.y + c.h, 16, [220, 200, 170], 90);
   const ty = Math.floor((c.y + c.h + 1) / T);
   let broke = false;
@@ -297,27 +410,27 @@ function slamImpact(c) {
     for (let tx = tx0 + 1; tileAt(tx, ty) === "X"; tx++) destroyTile(tx, ty);
     broke = true;
   }
-  if (broke) toast("CRACK! The rock shatters!", 1.5);
+  if (broke) { toast("CRACK! The rock shatters!", 1.5); sfx("crack"); }
   enemies.forEach((e) => { if (e.alive && Math.abs(e.x - c.x) < 34 && Math.abs(e.y - c.y) < 20) killEnemy(e); });
 }
 
 function killEnemy(e) {
-  e.alive = false; e.s.hide();
+  e.alive = false; e.s.hide(); sfx("pop");
   burst(e.x + 6, e.y + 3, 10, [215, 120, 170], 50);
 }
 
 function updatePlayer(c, dt, rects) {
   const spec = SPEC[c.kind];
   if (c.dead > 0) c.dead -= dt;
-  const st = stick(c.kind, c.pad);
+  const st = stick(c.kind);
   const py = c.y;
   c.inWater = inWaterAt(c);
   if (c.inWater && c.kind === "fox") {
     burst(c.x + 6, c.y, 12, [120, 200, 255]);
-    toast("Splash! Foxes can't swim. Maybe there's another way across?");
+    toast("Splash! Red pandas can't swim. Maybe there's another way across?"); sfx("splash");
     return respawn(c);
   }
-  if (onThorns(c) || c.y > LH + 40) { toast("Ouch!", 1.2); return respawn(c); }
+  if (onThorns(c) || c.y > LH + 40) { toast("Ouch!", 1.2); sfx("hurt"); return respawn(c); }
 
   let wantX = st.x * spec.speed;
   const other = c === otter ? fox : otter;
@@ -331,11 +444,11 @@ function updatePlayer(c, dt, rects) {
     c.vy += st.y * 500 * dt;
     c.vy *= 0.94;
     const atSurface = tileAt(Math.floor((c.x + c.w / 2) / T), Math.floor((c.y - 2) / T)) !== "W";
-    if (pressed(c.kind, "jump")) c.vy = atSurface ? -spec.jump : c.vy - 90;
+    if (pressed(c.kind, "jump")) { c.vy = atSurface ? -spec.jump : c.vy - 90; sfx(atSurface ? "jump" : "splash"); }
     if (Math.random() < 0.05) burst(c.x + c.w / 2, c.y, 1, [220, 240, 255], 10, -40);
   } else if (pressed(c.kind, "jump")) {
-    if (c.onGround) { c.vy = -spec.jump; c.onGround = false; c.ground = null; }
-    else if (spec.air && c.air < spec.air) { c.vy = -spec.air2; c.air++; burst(c.x + c.w / 2, c.y + c.h, 6, [255, 240, 220], 30); }
+    if (c.onGround) { c.vy = -spec.jump; c.onGround = false; c.ground = null; sfx("jump"); }
+    else if (spec.air && c.air < spec.air) { c.vy = -spec.air2; c.air++; sfx("double"); burst(c.x + c.w / 2, c.y + c.h, 6, [255, 240, 220], 30); }
   }
 
   // special abilities: otter ground-pound, fox air-dash
@@ -344,7 +457,7 @@ function updatePlayer(c, dt, rects) {
       if (!c.onGround && !c.slam) { c.slam = true; c.vy = 520; }
       else if (c.onGround) toast("Jump first, then R2 in mid-air to slam!", 1.5);
     } else if (c.canDash && c.dashCd <= 0) {
-      c.dash = 0.22; c.dashCd = 0.45; c.canDash = c.onGround;
+      c.dash = 0.22; c.dashCd = 0.45; c.canDash = c.onGround; sfx("dash");
       burst(c.x + c.w / 2, c.y + c.h / 2, 8, [255, 170, 110], 30, 0);
     }
   }
@@ -352,7 +465,7 @@ function updatePlayer(c, dt, rects) {
 
   // attack: swipe in front, cuts brambles and bonks beetles
   if (pressed(c.kind, "attack") && c.atkCd <= 0) {
-    c.atk = 0.15; c.atkCd = 0.3;
+    c.atk = 0.15; c.atkCd = 0.3; sfx("swipe");
     const hb = { x: c.facing > 0 ? c.x + c.w - 2 : c.x - 14, y: c.y - 3, w: 16, h: c.h + 6 };
     enemies.forEach((e) => e.alive && overlaps(hb, e) && killEnemy(e));
     for (let ty = Math.floor(hb.y / T); ty <= Math.floor((hb.y + hb.h) / T); ty++)
@@ -370,14 +483,14 @@ function updatePlayer(c, dt, rects) {
     if (lv) useLever(lv);
     else if (Math.abs(bear.x - c.x) < 36 && Math.abs(bear.y - c.y) < 24) {
       Object.assign(bear, { mode: "send", sendDir: c.facing, sendJumps: 0, blockT: 0 });
-      bubble(pick(["Go, Bear! 🐾", "Go get it, buddy!", "Woof! *zooms*"]));
+      bubble(pick(["Go, Bear! 🐾", "Go get it, buddy!", "Woof! *zooms*"])); sfx("woof");
     }
   }
   if (pressed(c.kind, "call")) callBear(c);
   if (pressed(c.kind, "love")) {
     if (Math.abs(bear.x - c.x) < 28 && Math.abs(bear.y - c.y) < 20) petBear(c);
     else {
-      heart(c.x + c.w / 2, c.y - 4);
+      heart(c.x + c.w / 2, c.y - 4); sfx("heart");
       if (Math.abs(c.x - other.x) < 20 && Math.abs(c.y - other.y) < 16) { heart(other.x + other.w / 2, other.y - 8); heart((c.x + other.x) / 2, c.y - 14); }
     }
   }
@@ -390,6 +503,16 @@ function updatePlayer(c, dt, rects) {
   c.s.flip(c.facing < 0);
   const blink = c.dead > 0 && Math.floor(c.dead * 12) % 2;
   if (blink) c.s.hide(); else c.s.place(c.x + c.w / 2, c.y + c.h - c.art.h / 2 + (c.inWater ? 2 : 0));
+  if (c.pebble) {
+    const still = c.onGround && !c.inWater && Math.abs(wantX) < 5 && c.dead <= 0;
+    c.idle = still ? c.idle + dt : 0;
+    if (c.idle > 2.5) {
+      const ph = (c.idle * 2.2) % 1, h = Math.sin(ph * Math.PI) * 10;
+      if (ph < c.lastPh) sfx("tick");
+      c.lastPh = ph;
+      c.pebble.place(c.x + c.w / 2 + c.facing * 4, c.y - 2 - h);
+    } else c.pebble.hide();
+  }
   if (c.atk > 0) { c.swipe.flip(c.facing < 0); c.swipe.place(c.x + c.w / 2 + c.facing * 12, c.y + c.h / 2 - 1); }
   else c.swipe.hide();
 }
@@ -399,25 +522,28 @@ function useLever(lv) {
   else if (lv.timer) { lv.on = true; lv.t = lv.timer; }
   else if (lv.sync && !lv.on) lv.arm = 0.6;
   burst(lv.x + 8, lv.y + 8, 8, [255, 230, 120], 40);
+  sfx("lever");
 }
 
 // ---------- Bear ----------
 function callBear(c) {
   const near = Math.abs(bear.x - c.x) < 40 && Math.abs(bear.y - c.y) < 24;
   if (bear.mode === "follow" && bear.target === c && near) {
-    bear.mode = "stay"; bubble("*sits*  Good boy, Bear!");
+    bear.mode = "stay"; bubble("*sits*  Good boy, Bear!"); sfx("pet");
   } else {
-    bear.mode = "follow"; bear.target = c; bubble("Woof! 🐾");
+    bear.mode = "follow"; bear.target = c; bubble("Woof! 🐾"); sfx("woof");
   }
 }
 function petBear(c) {
   bear.petT = 1.3; bear.facing = Math.sign(c.x - bear.x) || 1;
   for (let i = 0; i < 3; i++) heart(bear.x + 7 + (i - 1) * 6, bear.y - 4 - i * 3);
+  sfx("pet");
   bubble(pick(["*happy tail wags*", "*leans into pets*", "*rolls over for belly rubs*", "Bear loves you! ♥", "*doodle zoomies*"]));
 }
 function bearToSafety(msg) {
+  sfx("whimper");
   burst(bear.x + 7, bear.y + 6, 12, [120, 200, 255]);
-  spawnAt(bear, L.checkpoints[cpIdx].tx + 4);
+  spawnAt(bear, L.checkpoints[cpIdx].tx + 2);
   bear.mode = "follow";
   if (msg) bubble(msg);
 }
@@ -434,7 +560,7 @@ function updateBear(dt, rects) {
     b.stuck = dist > 70 ? b.stuck + dt : 0;
     if (dist > 260 || b.stuck > 2.5) { // Bear catches up (but never into water)
       burst(b.x + 7, b.y + 6, 12, [240, 240, 240]);
-      if (t.inWater || !t.onGround || inWaterAt(t)) spawnAt(b, L.checkpoints[cpIdx].tx + 4);
+      if (t.inWater || !t.onGround || inWaterAt(t)) spawnAt(b, L.checkpoints[cpIdx].tx + 2);
       else { b.x = t.x; b.y = t.y + t.h - b.h; b.vx = b.vy = 0; }
       b.stuck = 0;
       burst(b.x + 7, b.y + 6, 12, [240, 240, 240]);
@@ -461,6 +587,7 @@ function updateBear(dt, rects) {
     if (dirt.length) {
       b.dig += dt;
       if (Math.random() < 0.3) burst(b.x + b.w / 2 + Math.sign(wantX) * 8, b.y + 8, 1, [176, 122, 74], 40);
+      if (Math.random() < 0.02) sfx("dig");
       if (b.dig > 0.4) { dirt.forEach((ty) => destroyTile(fx, ty)); b.dig = 0; if (Math.random() < 0.5) bubble("*dig dig dig*"); }
     } else if (b.onGround) {
       if (b.mode === "follow") b.vy = -SPEC.bear.jump;
@@ -494,7 +621,7 @@ function updateEnemies(dt, rects) {
     for (const p of players) {
       if (p.dead > 0 || !overlaps(p, e)) continue;
       if (p.dash > 0 || (p.vy > 60 && p.y + p.h - e.y < 6)) { killEnemy(e); p.vy = -180; }
-      else { toast("Pinched by a bramble beetle! Swipe them with ○.", 2); respawn(p); }
+      else { toast("Pinched by a bramble beetle! Swipe them with ○.", 2); sfx("hurt"); respawn(p); }
     }
     e.anim += dt * 6;
     e.s.frame(Math.floor(e.anim) % 2);
@@ -504,14 +631,14 @@ function updateEnemies(dt, rects) {
 }
 
 // ---------- World objects ----------
-let friends = 0, syncFailT = 0;
+let friends = 0, bones = 0, syncFailT = 0;
 function updateWorld(dt, rects) {
   const bodies = [otter, fox, bear, ...L.blocks];
   L.plates.forEach((p) => {
     const zone = { x: p.x + 2, y: p.y - 4, w: p.w - 4, h: 8 };
     const was = p.down;
     p.down = bodies.some((b) => overlaps(b, zone));
-    if (p.down && !was) burst(p.x + 8, p.y, 4, [255, 230, 120], 25);
+    if (p.down && !was) { burst(p.x + 8, p.y, 4, [255, 230, 120], 25); sfx("plate"); }
     p.s.frame(p.down ? 1 : 0);
     p.s.place(p.x + 8, p.y + 2);
   });
@@ -524,19 +651,21 @@ function updateWorld(dt, rects) {
   });
   Object.values(groups).forEach((g) => {
     if (g[0].on) return;
-    if (g.every((l) => l.arm > 0)) { g.forEach((l) => (l.on = true)); toast("Perfect sync! 🎉"); }
+    if (g.every((l) => l.arm > 0)) { g.forEach((l) => (l.on = true)); toast("Perfect sync! 🎉"); sfx("sync"); }
     else if (g.some((l) => l.arm > 0 && l.arm <= dt * 1.5) && syncFailT <= 0) {
-      toast("Not quite together! Count down out loud: 3... 2... 1... press!", 2.5); syncFailT = 1;
+      toast("Not quite together! Count down out loud: 3... 2... 1... press!", 2.5); syncFailT = 1; sfx("fail");
     }
   });
   syncFailT -= dt;
   const timed = L.levers.find((l) => l.timer && l.on);
+  if (timed && Math.ceil(timed.t) !== Math.ceil(timed.t + dt)) sfx("tick");
   timerEl.textContent = timed ? `⏱ ${Math.ceil(timed.t)}` : "";
   timerEl.classList.toggle("show", !!timed);
 
   L.gates.forEach((g) => {
     const on = channel(g.ch) >= g.need;
     if (on && g.latch && !g.latched) { g.latched = true; toast("The big gate rumbles open! 🎉"); }
+    if ((on || g.latched) !== !!g.wasOn) { g.wasOn = on || g.latched; sfx("gate"); }
     const blocked = bodies.some((b) => b !== g && overlaps(b, g));
     const target = on || g.latched || (g.open > 0.5 && blocked) ? 1 : 0;
     g.open += Math.sign(target - g.open) * Math.min(Math.abs(target - g.open), dt * 3);
@@ -544,9 +673,9 @@ function updateWorld(dt, rects) {
   });
   L.bridges.forEach((br) => {
     const target = channel(br.ch) > 0 ? 1 : 0;
-    if (target && br.rise === 0) toast("A log bridge floats up!");
+    if (target && br.rise === 0) { toast("A log bridge floats up!"); sfx("bridge"); }
     br.rise += Math.sign(target - br.rise) * Math.min(Math.abs(target - br.rise), dt * (target ? 1.5 : 0.8));
-    br.s.place(br.x + br.w / 2, br.y + br.h / 2 + (1 - br.rise) * 20);
+    if (br.rise <= 0) br.s.hide(); else br.s.place(br.x + br.w / 2, br.y + br.h / 2 + (1 - br.rise) * 20);
   });
   L.movers.forEach((m) => {
     const px = m.x, py = m.y;
@@ -564,7 +693,7 @@ function updateWorld(dt, rects) {
   L.blocks.forEach((b) => {
     const dirs = Object.values(b.pushers).filter(Boolean);
     const dir = dirs.filter((d) => d === 1).length >= b.need ? 1 : dirs.filter((d) => d === -1).length >= b.need ? -1 : 0;
-    if (dirs.length && !dir && b.need > 1 && Math.random() < 0.02) toast("Hnnng! Too heavy for one. Push together!", 1.5);
+    if (dirs.length && !dir && b.need > 1 && toastT <= 0) toast("Hnnng! Too heavy for one. Push together!", 1.5);
     const px = b.x, py = b.y;
     const others = rects.filter((r) => r !== b);
     b.vy = Math.min(b.vy + 900 * dt, 400);
@@ -574,7 +703,7 @@ function updateWorld(dt, rects) {
     const cx = Math.floor((b.x + b.w / 2) / T), below = Math.floor((b.y + b.h + 1) / T);
     if (!filled(cx, below)) { let c0 = cx; while (!filled(c0 - 1, below) && cx - c0 < 4) c0--; b.x = c0 * T; }
     if (move(b, b.vy * dt, "y", others)) {
-      if (b.vy > 200) { shakeT = 0.2; burst(b.x + b.w / 2, b.y + b.h, 14, [140, 120, 90], 70); if (b.need > 1) toast("THUD! Teamwork!", 1.5); }
+      if (b.vy > 200) { shakeT = 0.2; sfx("thud"); burst(b.x + b.w / 2, b.y + b.h, 14, [140, 120, 90], 70); if (b.need > 1) toast("THUD! Teamwork!", 1.5); }
       b.vy = 0;
     }
     b.lastDx = b.x - px; b.lastDy = b.y - py;
@@ -586,7 +715,7 @@ function updateWorld(dt, rects) {
     if (sp.t > 0 && !sp.broken) {
       sp.t += dt;
       sp.s.place(sp.tx * T + 8 + (Math.random() - 0.5) * 2, sp.ty * T + 8);
-      if (sp.t > 0.55) { sp.broken = true; sp.s.hide(); sp.back = 3; burst(sp.tx * T + 8, sp.ty * T + 8, 6, [199, 176, 138], 30); }
+      if (sp.t > 0.55) { sfx("crumble"); sp.broken = true; sp.s.hide(); sp.back = 3; burst(sp.tx * T + 8, sp.ty * T + 8, 6, [199, 176, 138], 30); }
     } else if (sp.broken && (sp.back -= dt) <= 0) {
       const r = { x: sp.tx * T, y: sp.ty * T, w: T, h: T };
       if (![otter, fox, bear].some((c) => overlaps(c, r))) { sp.broken = false; sp.t = 0; sp.s.place(sp.tx * T + 8, sp.ty * T + 8); }
@@ -595,20 +724,35 @@ function updateWorld(dt, rects) {
   const carried = {};
   L.items.forEach((it) => {
     if (it.done) {
+      if (it.kind === "bone") return;
       const n = it.npc;
       it.s.place(n.x + 12, n.y - it.h / 2 - Math.abs(Math.sin(performance.now() / 250)) * 3);
       return;
     }
     if (!it.carrier) {
       const p = players.find((p) => p.dead <= 0 && overlaps(p, it));
-      if (p) { it.carrier = p; toast(it.kind === "key" ? `The ${p.kind} grabbed the key! 🔑` : `The ${p.kind} is carrying the little one. Take them home!`); }
+      if (p) {
+        it.carrier = p; sfx("pickup");
+        toast(it.kind === "key" ? `The ${NAME[p.kind]} grabbed the key! 🔑`
+          : it.kind === "bone" ? "A bone! Bear's tail is already wagging... bring it to him!"
+          : it.art === "BALL" || it.art === "CARROT" ? `The ${NAME[p.kind]} picked it up. Bring it back!`
+          : `The ${NAME[p.kind]} is carrying the little one. Take them home!`);
+      }
     }
     if (it.carrier) {
       const c = it.carrier, k = (carried[c.kind] = (carried[c.kind] || 0) + 1) - 1;
       it.x += (c.x + c.w / 2 - it.w / 2 - it.x) * Math.min(1, dt * 10);
       it.y += (c.y - it.h - 1 - k * 8 - it.y) * Math.min(1, dt * 10);
+      if (it.kind === "bone" && Math.abs(c.x - bear.x) < 24 && Math.abs(c.y - bear.y) < 20) {
+        it.done = true; it.carrier = null; it.s.hide(); bones++;
+        bear.petT = 2.2; sfx("crunch"); setTimeout(() => sfx("woof"), 700);
+        bubble(pick(["*CRUNCH CRUNCH* Best. Day. Ever!", "A BONE!! *happiest boy*", "*chomps happily* ♥"]));
+        for (let i = 0; i < 6; i++) heart(bear.x + 7 + (Math.random() - 0.5) * 16, bear.y - 6 - i * 2);
+        return;
+      }
       if (it.npc && overlaps(c, it.npc.zone)) {
-        it.done = true; it.carrier = null; it.npc.helped = true; friends++;
+        it.done = true; it.carrier = null; it.npc.helped = true; friends++; sfx("friend");
+        if (it.npc.art === "RIGBY") npcBubble(it.npc, "ARF ARF ARF!! 🎾");
         toast(`${it.npc.name}: "${it.npc.thanks}"`, 3.5);
         for (let i = 0; i < 5; i++) heart(it.npc.x + (Math.random() - 0.5) * 20, it.npc.y - 16);
       }
@@ -617,6 +761,13 @@ function updateWorld(dt, rects) {
   });
   L.npcs.forEach((n) => {
     const near = players.reduce((a, p) => (Math.abs(p.x - n.x) < Math.abs(a.x - n.x) ? p : a));
+    const close = players.some((p) => Math.abs(p.x - n.x) < 56 && Math.abs(p.y - n.y) < 48);
+    if (n.art === "RIGBY" && close !== !!n.close) { // Rigby barks hello and goodbye
+      sfx("arf"); setTimeout(() => sfx("arf"), 160);
+      npcBubble(n, close ? pick(["Arf! Arf! Hi friends!", "ARF! New friends!!", "Arf arf! 🐾"]) : pick(["Arf! Aww, bye!", "Arf... come back soon!", "Arf arf! Bye bye!"]));
+    }
+    n.close = close;
+    if (n.s.art.n > 1) n.s.frame(n.helped || close ? Math.floor(performance.now() / 180) % 2 : 0);
     n.s.flip(near.x < n.x);
     n.s.place(n.x, n.y - n.s.art.h / 2 - (n.helped ? Math.abs(Math.sin(performance.now() / 200)) * 2 : 0));
   });
@@ -629,7 +780,7 @@ function updateCamera(dt, snap) {
   const ty = Math.min(Math.max((otter.y + fox.y) / 2 - 30, viewH / 2), LH - viewH / 2);
   const k = snap ? 1 : Math.min(1, dt * 4);
   camX += (tx - camX) * k; camY += (ty - camY) * k;
-  const sh = shakeT > 0 ? ((shakeT -= dt), 3) : 0;
+  const sh = shakeT > 0 ? ((shakeT -= dt), settings.shake ? 3 : 0) : 0;
   emerald.camera.transform.position.x = -camX + (Math.random() - 0.5) * sh;
   emerald.camera.transform.position.y = camY + (Math.random() - 0.5) * sh;
   sky.go.transform.scale.x = viewW / 2 + 4; sky.go.transform.scale.y = viewH / 2 + 4;
@@ -640,10 +791,63 @@ function updateCamera(dt, snap) {
 const toScreen = (x, y) => [window.innerWidth / 2 + (x - camX) * Z, window.innerHeight / 2 + (y - camY) * Z];
 
 // ---------- Game flow ----------
-let state = hp.has("go") ? "play" : "title", winT = 0, sel = chapter;
+let state = hp.has("go") ? "play" : "splash", winT = 0, sel = chapter;
 const titleEl = $("title"), winEl = $("win"), chapEl = $("chapters");
 const CH_NAMES = ["Creekside", "Mossy Hollow", "Windy Ridge", "Stormy Falls"];
-if (state === "play") { titleEl.classList.add("hidden"); toast(L.sub, 4); }
+const splashEl = $("splash"), pauseEl = $("pause");
+if (state === "play") { titleEl.classList.add("hidden"); splashEl.classList.add("hidden"); toast(L.sub, 4); }
+else titleEl.classList.add("hidden");
+// splash art: the gang, drawn from the same pixel sprites
+[["OTTER", 0], ["FOX", 0], ["BEAR", 0], ["RIGBY", 0]].forEach(([k, f]) => {
+  const a = ART[k], c = document.createElement("canvas");
+  c.width = a.w; c.height = a.h;
+  const img = new Image();
+  img.onload = () => c.getContext("2d").drawImage(img, f * a.w, 0, a.w, a.h, 0, 0, a.w, a.h);
+  img.src = a.url;
+  c.className = "pal"; c.style.width = a.w * 5 + "px";
+  $("gang").appendChild(c);
+});
+
+// ---------- Pause menu ----------
+const MENU = [
+  { label: "Resume", act: () => setPause(false) },
+  { label: "Music volume", key: "music", slider: true },
+  { label: "Sound effects", key: "sfx", slider: true },
+  { label: "Screen shake", key: "shake" },
+  { label: "Hint signs", key: "hints" },
+  { label: "Speech bubbles", key: "bubbles" },
+  { label: "Back to checkpoint (both)", act: () => { respawn(otter); respawn(fox); setPause(false); } },
+  { label: "Restart chapter", act: () => gotoChapter(chapter) },
+  { label: "Chapter select", act: () => { location.hash = ""; location.reload(); } },
+];
+let menuSel = 0, prevState = "play";
+function setPause(on) {
+  if (on) { prevState = state; state = "pause"; menuSel = 0; drawMenu(); }
+  else state = prevState;
+  pauseEl.classList.toggle("hidden", !on);
+}
+function drawMenu() {
+  $("menu").innerHTML = MENU.map((m, i) => {
+    let v = "";
+    if (m.slider) v = `<span class="bar">${"▮".repeat(Math.round(settings[m.key] * 10))}${"▯".repeat(10 - Math.round(settings[m.key] * 10))}</span>`;
+    else if (m.key) v = `<span>${settings[m.key] ? "ON" : "OFF"}</span>`;
+    return `<div class="${i === menuSel ? "sel" : ""}" data-i="${i}"><span>${m.label}</span>${v}</div>`;
+  }).join("");
+}
+function menuInput(i, dir) {
+  const m = MENU[i];
+  if (m.slider) settings[m.key] = Math.min(1, Math.max(0, Math.round((settings[m.key] + dir * 0.1) * 10) / 10));
+  else if (m.key) settings[m.key] = !settings[m.key];
+  else if (dir === 0) return m.act();
+  saveSettings(); syncAudio(); drawMenu(); sfx("select");
+}
+$("menu").addEventListener("click", (e) => {
+  const row = e.target.closest("[data-i]");
+  if (row) { menuSel = +row.dataset.i; menuInput(menuSel, MENU[menuSel].slider ? 1 : 0); }
+});
+window.addEventListener("keydown", (e) => {
+  if ((e.key === "Escape" || e.key === "p" || e.key === "P") && (state === "play" || state === "pause")) setPause(state !== "pause");
+});
 const gotoChapter = (i) => { location.hash = `c=${i + 1}&go`; location.reload(); };
 function drawChapters() {
   const html = CH_NAMES.map((name, i) => {
@@ -653,25 +857,43 @@ function drawChapters() {
   if (chapEl.innerHTML !== html) chapEl.innerHTML = html;
 }
 function updatePads() {
-  const pad = (i, el, name) => { el.textContent = `${name}: ${input.isGamepadConnected?.(i) ? "🎮 controller " + (i + 1) : "⌨ keyboard"}`; };
-  pad(0, $("p1"), "Otter"); pad(1, $("p2"), "Fox");
+  const pad = (i, el, name) => { el.textContent = `${name}: ${input.isGamepadConnected?.(i) ? "🎮 controller connected" : "⌨ keyboard (press a button on a controller)"}`; };
+  bindPads(); pad(padFor.otter, $("p1"), "Otter"); pad(padFor.fox, $("p2"), "Red panda");
 }
-const totalFriends = L.items.filter((i) => i.npc).length;
+const totalFriends = L.items.filter((i) => i.npc).length, totalBones = L.items.filter((i) => i.kind === "bone").length;
 
+let frameN = 0;
 function frame(dt) {
+  frameN++;
   dt = Math.min(dt, 1 / 20);
-  if (state === "title") {
+  const anyStart = pressed("otter", "start") || pressed("fox", "start");
+  if (state === "splash") {
+    updatePads();
+    if (anyStart || pressed("otter", "jump") || pressed("fox", "jump")) {
+      state = "title"; splashEl.classList.add("hidden"); titleEl.classList.remove("hidden"); sfx("pet");
+    }
+  } else if (state === "pause") {
+    for (const w of ["otter", "fox"]) {
+      if (pressed(w, "mUp")) { menuSel = (menuSel + MENU.length - 1) % MENU.length; drawMenu(); sfx("select"); }
+      if (pressed(w, "mDown")) { menuSel = (menuSel + 1) % MENU.length; drawMenu(); sfx("select"); }
+      if (pressed(w, "mLeft")) menuInput(menuSel, -1);
+      if (pressed(w, "mRight")) menuInput(menuSel, 1);
+      if (pressed(w, "mOk")) menuInput(menuSel, 0);
+      if (pressed(w, "mBack") || pressed(w, "pause")) setPause(false);
+    }
+  } else if (state === "title") {
     updatePads();
     for (const w of ["otter", "fox"]) {
       if (pressed(w, "left")) sel = Math.max(0, sel - 1);
       if (pressed(w, "right")) sel = Math.min(unlocked - 1, sel + 1);
     }
     drawChapters();
-    if (pressed("otter", "start") || pressed("fox", "start")) {
+    if (anyStart) {
       if (sel !== chapter) return gotoChapter(sel);
       state = "play"; titleEl.classList.add("hidden"); toast(L.sub, 4);
     }
   } else {
+    if (pressed("otter", "pause") || pressed("fox", "pause")) { setPause(true); return; }
     const steps = Math.ceil(dt / (1 / 120)), h = dt / steps;
     for (let i = 0; i < steps; i++) {
       const rects = dynSolids();
@@ -692,23 +914,24 @@ function frame(dt) {
         try { localStorage.setItem("creekside.unlocked", String(Math.max(unlocked, chapter + 2))); } catch {}
         const last = chapter === LEVELS.length - 1;
         $("winTitle").textContent = last ? "The End ♥" : `${CH_NAMES[chapter]} complete!`;
-        $("winSub").textContent = `Friends helped: ${friends}/${totalFriends}` + (last ? " · Bear is SO proud of you two." : "");
+        sfx("win");
+        $("winSub").textContent = `Friends helped: ${friends}/${totalFriends} · Bones for Bear: ${bones}/${totalBones}` + (last ? " · Bear is SO proud of you two." : "");
         $("winNext").textContent = last ? "Press ✕ to play again from the start" : "Press ✕ for the next chapter";
       }
     }
     if (state === "win") {
       winT += dt;
       if (Math.random() < dt * 6) heart(L.exit.x + Math.random() * 48, L.exit.y);
-      if (winT > 1.2 && (pressed("otter", "start") || pressed("fox", "start")))
+      if (winT > 1.2 && anyStart)
         gotoChapter(chapter === LEVELS.length - 1 ? 0 : chapter + 1);
     }
     const nearTo = (x, y) => players.some((p) => Math.abs(p.x - x) < 40 && Math.abs(p.y - y) < 40);
     const npc = L.npcs.find((n) => nearTo(n.x, n.y));
     const sign = L.signs.find((s) => nearTo(s.x, s.y));
-    const text = npc ? `${npc.name}: "${npc.helped ? npc.thanks : npc.say}"` : sign ? sign.text : "";
+    const text = !settings.hints ? "" : npc ? `${npc.name}: "${npc.helped ? npc.thanks : npc.say}"` : sign ? sign.text : "";
     hintEl.textContent = text;
     hintEl.classList.toggle("show", !!text);
-    hudEl.textContent = `${L.name}   ·   Friends ${friends}/${totalFriends}` + (L.items.some((i) => i.kind === "key" && i.carrier) ? "   ·   🔑" : "");
+    hudEl.textContent = `${L.name}   ·   Friends ${friends}/${totalFriends}   ·   🦴 ${bones}/${totalBones}` + (L.items.some((i) => i.kind === "key" && i.carrier) ? "   ·   🔑" : "");
   }
 
   parts.forEach((p) => {
@@ -723,9 +946,15 @@ function frame(dt) {
   });
   if ((toastT -= dt) <= 0) toastEl.classList.remove("show");
   if ((bubbleT -= dt) <= 0) bubbleEl.classList.remove("show");
+  if ((nBubbleT -= dt) <= 0) nBubbleEl.classList.remove("show");
+  if (nBubbleNpc) {
+    const [nx, ny] = toScreen(nBubbleNpc.x, nBubbleNpc.y - nBubbleNpc.s.art.h - 4);
+    nBubbleEl.style.transform = `translate(${nx}px, ${ny}px) translate(-50%, -100%)`;
+  }
   const [bx, by] = toScreen(bear.x + 7, bear.y - 6);
   bubbleEl.style.transform = `translate(${bx}px, ${by}px) translate(-50%, -100%)`;
   updateCamera(dt, false);
+  updateAmbient(dt);
 }
 
 fit();
@@ -738,4 +967,4 @@ emerald.run((dt) => {
   emerald.drawScene(scene, dt);
   input.update();
 });
-window.__game = { otter, fox, bear, L, enemies, special, get state() { return state; }, get friends() { return friends; } };
+window.__game = { otter, fox, bear, L, enemies, special, input, frames: () => frameN, get state() { return state; }, get friends() { return friends; } };

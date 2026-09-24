@@ -41,7 +41,7 @@ const OTTER_BODY = [
   "kk......kkbbbbbllk..",
   "kbkkkkkkbbbbbbbbk...",
   ".kbbbbbbbbbbbbbbk...",
-  "..kbbbbbbllllbbbk...",
+  "..kbbbbbblllgbbbk...",
   "...kkbbbkkkkbbbk....",
 ];
 const OTTER_LEGS = [
@@ -51,21 +51,22 @@ const OTTER_LEGS = [
   ["..kbk.......kbk.....", "...................."],
 ];
 export const OTTER = strip(OTTER_LEGS.map((l) => [...OTTER_BODY, ...l]), {
-  k: "#2a1a12", b: "#7b4a2b", l: "#d1a476", n: "#0d0907",
+  k: "#2a1a12", b: "#7b4a2b", l: "#d1a476", n: "#0d0907", g: "#9aa2ab",
 });
+export const PEBBLE = strip([[".gg", "ggw", ".gg"]], { g: "#8f98a3", w: "#d7dde3" });
 
-const FOX_BODY = [
-  "..............k.k...",
-  ".............kokok..",
-  ".............koook..",
-  "............koonok..",
-  "............koowwwn.",
-  "ww.........kooowwk..",
-  "wwok.....kkoooowk...",
-  ".wook.kkkoooooowk...",
-  "..kooooooooooowwk...",
-  "...kooooooooooook...",
-  "....kkoowwwwookk....",
+const FOX_BODY = [ // red panda (kept as FOX internally)
+  "..............w.w...",
+  ".............wowow..",
+  ".............ooooo..",
+  "............owwoow..",
+  "............oonowwn.",
+  "mo..........oowwwk..",
+  "moro......kkoooowk..",
+  ".mrom.kkkooooooook..",
+  "..mroooooooooooook..",
+  "...ooooooooooooook..",
+  "....kddddddddddkk...",
 ];
 const FOX_LEGS = [
   [".....kdk....kdk.....", ".....kdk....kdk.....", ".....kk.....kk......"],
@@ -74,7 +75,7 @@ const FOX_LEGS = [
   ["....kdk....kdk......", "...kdk.......kdk....", "...................."],
 ];
 export const FOX = strip(FOX_LEGS.map((l) => [...FOX_BODY, ...l]), {
-  k: "#3a1a0c", o: "#e0672a", w: "#f6ede0", n: "#111", d: "#2a1f1a",
+  k: "#3a1a0c", o: "#c1440e", w: "#f6ede0", n: "#111", d: "#2a1a14", m: "#7a2a0c", r: "#e6894a",
 });
 
 // Bear: black & white mini aussiedoodle
@@ -233,7 +234,37 @@ export function bakeLevel(level) {
             const d = 3 + Math.floor(r() * 3);
             for (let y = 0; y < d; y++) px(ox + x, oy + y, y === 0 ? "#7cc95a" : y === d - 1 ? "#3f8a36" : "#5aa845");
           }
-          if (r() < 0.35) { // flowers & tufts
+          const roll = r();
+          const nearWater = at(tx - 1, ty) === "W" || at(tx + 1, ty) === "W" || at(tx - 1, ty + 1) === "W" || at(tx + 1, ty + 1) === "W";
+          if (nearWater && roll < 0.8) { // cattails
+            for (let i = 0; i < 3; i++) {
+              const cx = ox + 3 + i * 4 + Math.floor(r() * 2), h = 8 + Math.floor(r() * 6);
+              g.fillStyle = "#4f8a3a"; g.fillRect(cx, oy - h, 1, h);
+              g.fillStyle = "#6b4226"; g.fillRect(cx - 1, oy - h + 1, 3, 4);
+            }
+          } else if (roll < 0.1) { // bush
+            for (let i = 0; i < 4; i++) {
+              g.fillStyle = ["#3b7f45", "#4a9451", "#5aa845", "#2f6b3a"][i];
+              g.beginPath(); g.arc(ox + 4 + i * 3, oy - 3 - (i % 2) * 2, 4 + (i % 2), 0, 7); g.fill();
+            }
+            if (r() < 0.5) { g.fillStyle = "#e24a4a"; g.fillRect(ox + 6, oy - 6, 1, 1); g.fillRect(ox + 10, oy - 4, 1, 1); }
+          } else if (roll < 0.17) { // rock
+            g.fillStyle = "#6f7680"; g.fillRect(ox + 4, oy - 3, 8, 3); g.fillRect(ox + 5, oy - 4, 6, 1);
+            g.fillStyle = "#9aa2ab"; g.fillRect(ox + 5, oy - 4, 3, 1);
+          } else if (roll < 0.23) { // fern
+            g.fillStyle = "#3f8a36";
+            for (let i = 0; i < 5; i++) { g.fillRect(ox + 8 + (i - 2) * 2, oy - 3 - Math.abs(2 - i) * -1 - 3, 1, 5 - Math.abs(2 - i)); }
+            g.fillStyle = "#5aa845"; g.fillRect(ox + 6, oy - 6, 5, 1);
+          } else if (roll < 0.27) { // tiny mushrooms
+            for (const dx of [4, 9]) {
+              g.fillStyle = "#efe3cc"; g.fillRect(ox + dx + 1, oy - 3, 1, 3);
+              g.fillStyle = r() < 0.5 ? "#c0392b" : "#a86b3c"; g.fillRect(ox + dx, oy - 5, 3, 2);
+            }
+          } else if (roll < 0.29) { // stump
+            g.fillStyle = "#5a3a22"; g.fillRect(ox + 4, oy - 6, 8, 6);
+            g.fillStyle = "#c79a64"; g.fillRect(ox + 4, oy - 7, 8, 2);
+            g.fillStyle = "#8a5a33"; g.fillRect(ox + 6, oy - 7, 4, 1);
+          } else if (roll < 0.62) { // flowers & tufts
             const fx = ox + 2 + Math.floor(r() * 12);
             const col = ["#ff8fa3", "#ffe066", "#ffffff", "#b38cff"][Math.floor(r() * 4)];
             px(fx, oy - 1, "#3f8a36"); px(fx, oy - 2, "#3f8a36"); px(fx, oy - 3, col);
@@ -262,6 +293,15 @@ export function bakeLevel(level) {
           px(sx + 2, oy + 6, "#e24a7a");
         }
       }
+    }
+
+  // hanging vines & roots under overhangs (second pass so cave backdrops don't cover them)
+  for (let ty = 0; ty < H - 1; ty++)
+    for (let tx = 0; tx < W; tx++) {
+      if (!SOLID.includes(at(tx, ty)) || at(tx, ty + 1) !== "." || r() > 0.35) continue;
+      const vx = tx * T + 2 + Math.floor(r() * 12), len = 4 + Math.floor(r() * 12);
+      for (let i = 0; i < len; i++) px(vx + (i % 5 === 4 ? 1 : 0), (ty + 1) * T + i, i === len - 1 ? "#7cc95a" : "#3f8a36");
+      if (r() < 0.4) px(vx + 1, (ty + 1) * T + len - 3, "#ff8fa3");
     }
 
   signs.forEach((s) => {
@@ -445,3 +485,39 @@ export const CRACKED = tileArt((g, r) => {
   [[7, 0], [7, 1], [8, 2], [8, 3], [7, 4], [6, 5], [6, 6], [7, 7], [8, 8], [9, 8], [10, 9], [5, 7], [4, 8], [3, 9], [8, 10], [8, 11], [7, 12], [7, 13], [8, 14], [8, 15]]
     .forEach(([x, y]) => g.fillRect(x, y, 1, 1));
 });
+
+// Rigby: tri-color corgi (black saddle, tan face & ears, white blaze/chest/paws)
+export const RIGBY = strip(
+  [
+    [
+      "............k...k...", "...........krk.krk..", "...........krrkrrk..", "...........krwrrrk..",
+      "..........krrwwerk..", "..........krwwwwwn..", "..kk......krrwwwk...", ".krk..kkkkkxwwwk....",
+      ".krxkkxxxxxxxwwk....", "..kxxxxxxxxxxwwk....", "..kwrxxxxxxxxwk.....", "..kwwwwwwwwwwwk.....",
+      "...kwk.....kwk......", "...kk......kk.......",
+    ],
+    [
+      "............k...k...", "...........krk.krk..", "...........krrkrrk..", "...........krwrrrk..",
+      "..........krrwwerk..", "..........krwwwwwn..", "..........krrwwwpk..", "......kkkkkxwwwk....",
+      "..kkkkxxxxxxxwwk....", ".krxxxxxxxxxxwwk....", "..kwrxxxxxxxxwk.....", "..kwwwwwwwwwwwk.....",
+      "...kwk.....kwk......", "...kk......kk.......",
+    ],
+  ],
+  { k: "#1a1410", r: "#c8743a", x: "#1e1a18", w: "#f5f1ea", e: "#111", n: "#111", p: "#e8738a" }
+);
+export const BALL = strip([[".gggg.", "gggggg", "wggggg", "gwwggg", "ggggwg", ".gggg."]], { g: "#c9e33b", w: "#f5f7e0" });
+export const BONE = strip([["kk......kk", "kwwkkkkkwk", "kwwwwwwwwk", "kwkkkkkwwk", "kk......kk"]], { k: "#8a7a5c", w: "#f6efdc" });
+
+// ---------- Ambient eye candy ----------
+export const LEAF = strip([[".o.", "ooo", ".o."], ["o..", ".o.", "..o"]], { o: "#ffffff" });
+export const BUTTERFLY = strip([["p.p", "pkp", ".k."], [".p.", "pkp", ".k."]], { p: "#ffffff", k: "#2a1a12" });
+export const BIRD = strip([["k.....k", ".k...k.", "..kkk.."], [".......", "kkkkkkk", "..k.k.."]], { k: "#2a2a35" });
+export function cloud(seed) {
+  const r = rng(seed), c = canvas(64, 24), g = c.getContext("2d");
+  for (let i = 0; i < 7; i++) {
+    g.fillStyle = i < 5 ? "rgba(255,255,255,0.85)" : "rgba(235,242,250,0.9)";
+    const x = 10 + r() * 40, y = 8 + r() * 8, rr = 6 + r() * 6;
+    g.beginPath(); g.arc(x, y, rr, 0, 7); g.fill();
+  }
+  g.fillStyle = "rgba(255,255,255,0.85)"; g.fillRect(6, 14, 52, 6);
+  return { url: c.toDataURL(), w: 64, h: 24, n: 1 };
+}

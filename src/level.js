@@ -33,6 +33,7 @@ function builder(W, name, sub, theme) {
     mover: (o) => L.movers.push({ h: 8, speed: 35, ch: null, ...o, x: o.x0, y: o.y0, t: 0, dir: 1, pause: 0 }),
     npc(art, tx, ty, name, say, thanks) { const n = { art, tx, ty, name, say, thanks, helped: false }; L.npcs.push(n); return n; },
     item: (art, tx, ty, npc = null) => L.items.push({ art, tx, ty, npc, kind: art === "KEY" ? "key" : "friend" }),
+    bone: (tx, ty) => L.items.push({ art: "BONE", tx, ty, npc: null, kind: "bone" }),
     beetle: (tx, ty) => L.enemies.push({ tx, ty }),
     spawn: (tx) => (L.spawn = tx),
     exit: (tx, floor) => (L.exit = { x: tx * T, y: (floor - 3) * T + 8, w: 3 * T, h: 40 }),
@@ -43,15 +44,16 @@ function builder(W, name, sub, theme) {
 // ------------------------------------------------------------------ Chapter 1
 function creekside() {
   const b = builder(160, "Chapter 1 · Creekside", "Learn the ropes: plates, levers, stacking, pushing together.",
-    { sky: ["#6fb7e8", "#bfe6f5", "#fbe7c6"], far: ["#9cc6d8", "#b5d8e6"], mid: ["#6fa66a", "#86bb78", "#4f8a55"], bg: [160, 214, 238] });
+    { sky: ["#6fb7e8", "#bfe6f5", "#fbe7c6"], far: ["#9cc6d8", "#b5d8e6"], mid: ["#6fa66a", "#86bb78", "#4f8a55"], bg: [160, 214, 238], leaves: "#8fcf6a", butterflies: true, birds: true });
   const { fill, GY } = b;
   fill(0, GY, 41, 21, "#");
   fill(10, GY - 2, 12, GY - 1, "#");
   b.spawn(3); b.cp(1);
-  b.sign(2, 15, "Move with the left stick · ✕ jumps. Fox can double-jump in mid-air!");
-  b.sign(8, 15, "Bramble beetles pinch! Swipe them with ○. Otter: R2 in mid-air to SLAM. Fox: R2 to DASH.");
+  b.sign(2, 15, "Move with the left stick · ✕ jumps. The red panda can double-jump in mid-air!");
+  b.sign(8, 15, "Bramble beetles pinch! Swipe them with ○. Otter: R2 in mid-air to SLAM. Red panda: R2 to DASH.");
   b.beetle(17, 15);
-  b.sign(14, 15, "△ calls Bear. △ again next to him = sit & stay. L1/R1 next to him = pets (he loves pets).");
+  b.bone(11, 13);
+  b.sign(14, 15, "△ calls Bear. △ again next to him = sit & stay. L1/R1 next to him = pets. Bear LOVES bones: carry any you find to him!");
 
   b.cp(20);
   b.plate(23, 15, "A"); b.gate(28, GY, "A"); b.plate(32, 15, "A");
@@ -64,7 +66,7 @@ function creekside() {
   b.lever(52, 20, "C");
   b.bridge(45, 60, 15, "C");
   b.cp(42);
-  b.sign(43, 15, "Foxes can't swim, but otters love it. Something is glinting at the bottom... (□ uses levers)");
+  b.sign(43, 15, "Red pandas can't swim, but otters love it. Something is glinting at the bottom... (□ uses levers)");
   const duck = b.npc("MAMA_DUCK", 62, 15, "Mama Duck", "Quack! My duckling paddled off and got stuck at the bottom of the creek!", "Quack quack! Thank you, thank you!");
   b.item("DUCKLING", 57, 20, duck);
 
@@ -74,7 +76,7 @@ function creekside() {
   fill(70, 11, 114, 21, "#");
   b.lever(73, 10, "D");
   b.cp(64);
-  b.sign(65, 15, "Too high for anyone alone. Maybe the fox could hop off the otter's head?");
+  b.sign(65, 15, "Too high for anyone alone. Maybe the red panda could hop off the otter's head?");
 
   fill(92, 0, 106, 7, "S");
   b.boulder(95, 10);
@@ -103,7 +105,7 @@ function creekside() {
 // ------------------------------------------------------------------ Chapter 2
 function mossyHollow() {
   const b = builder(160, "Chapter 2 · Mossy Hollow", "Crates, digging, brambles, and a race against the clock.",
-    { sky: ["#5fa8a0", "#bfe3d0", "#e8f0c8"], far: ["#7fb0a0", "#98c4b2"], mid: ["#3f7a4a", "#548f5a", "#2c5e38"], bg: [150, 205, 190] });
+    { sky: ["#5fa8a0", "#bfe3d0", "#e8f0c8"], far: ["#7fb0a0", "#98c4b2"], mid: ["#3f7a4a", "#548f5a", "#2c5e38"], bg: [150, 205, 190], fireflies: true, butterflies: true, leaves: "#6fae5a" });
   const { fill, GY } = b;
   fill(0, GY, 159, 21, "#");
   b.spawn(3); b.cp(1);
@@ -143,6 +145,7 @@ function mossyHollow() {
   fill(104, 12, 112, 15, "#"); fill(106, 15, 111, 15, "."); fill(104, 15, 105, 15, "D");
   const hazel = b.npc("HEDGEHOG", 100, 15, "Hazel", "My little hoglet wandered into the old burrow and the entrance caved in! Could your dog dig?", "My baby! Oh thank you, thank you!");
   b.item("HOGLET", 110, 15, hazel);
+  b.bone(107, 15);
 
   b.cp(114);
   fill(122, 12, 128, 15, "#"); fill(124, 15, 127, 15, "."); fill(122, 15, 123, 15, "D");
@@ -162,7 +165,7 @@ function mossyHollow() {
 // ------------------------------------------------------------------ Chapter 3
 function windyRidge() {
   const b = builder(182, "Chapter 3 · Windy Ridge", "Bouncy mushrooms, moving logs, crumbly rocks and a doggy door.",
-    { sky: ["#f08a5d", "#f9c38b", "#fde9c9"], far: ["#c98a9a", "#dca2ac"], mid: ["#8a6a7a", "#a07f8a", "#6a4f5f"], bg: [245, 190, 150] });
+    { sky: ["#f08a5d", "#f9c38b", "#fde9c9"], far: ["#c98a9a", "#dca2ac"], mid: ["#8a6a7a", "#a07f8a", "#6a4f5f"], bg: [245, 190, 150], leaves: "#e8963c", wind: 1, birds: true });
   const { fill, GY } = b;
   fill(0, GY, 30, 21, "#");
   b.spawn(3); b.cp(1);
@@ -180,11 +183,14 @@ function windyRidge() {
 
   b.cp(58);
   fill(64, 10, 75, 18, "."); fill(64, 19, 75, 19, "^"); fill(64, 10, 75, 10, "C");
-  b.sign(60, 9, "Crumbly rocks fall a moment after you step on them. Keep moving!");
+  b.sign(58, 9, "Crumbly rocks fall a moment after you step on them. Keep moving!");
+  const rigby = b.npc("RIGBY", 62, 9, "Rigby", "Arf! I'm Rigby! My tennis ball bounced out onto the crumbly rocks... my legs are too short to reach it!", "ARF ARF! My ball!! You're my new best friends! *zoomies*");
+  b.item("BALL", 70, 9, rigby);
 
   b.cp(77);
   fill(80, 13, 100, 15, "."); fill(80, 10, 81, 12, ".");
   fill(84, 0, 100, 9, "S"); fill(84, 9, 88, 9, ".");
+  fill(80, 15, 80, 15, "M");
   b.flap(84, 9);
   b.plate(88, 9, "F");
   b.gate(92, GY, "F", { pillar: false });
@@ -196,7 +202,7 @@ function windyRidge() {
   fill(106, 16, 112, 19, "."); fill(106, 19, 112, 19, "^");
   b.lever(114, 15, "G");
   b.bridge(106, 112, 15, "G");
-  b.sign(103, 15, "Way too far to jump... unless you're a fox. Fox: jump, then R2 in mid-air to DASH!");
+  b.sign(103, 15, "Way too far to jump... unless you're a red panda. Red panda: jump, then R2 in mid-air to DASH!");
 
   b.cp(116);
   fill(120, 11, 120, 15, "S");
@@ -205,6 +211,7 @@ function windyRidge() {
   fill(129, 8, 141, 15, "#");
   b.sign(124, 15, "This log goes up and down on its own. Time your jump!");
   b.beetle(135, 7);
+  b.bone(140, 7);
   fill(142, 8, 150, 8, "C"); fill(142, 15, 150, 15, "^");
   fill(151, 8, 158, 15, "#");
   const clover = b.npc("BUNNY", 155, 7, "Clover", "Ohh, I'm SO hungry... I dropped my carrot on that tall rock way back there!", "*munch munch* You two are the best!");
@@ -218,7 +225,7 @@ function windyRidge() {
 // ------------------------------------------------------------------ Chapter 4
 function stormyFalls() {
   const b = builder(175, "Chapter 4 · Stormy Falls", "Everything you've learned, all at once. Stay close.",
-    { sky: ["#2e3a4a", "#56687a", "#8394a3"], far: ["#3e4c5a", "#4e5e6c"], mid: ["#2f4a3a", "#3c5a48", "#22382c"], bg: [60, 74, 90], rain: true });
+    { sky: ["#2e3a4a", "#56687a", "#8394a3"], far: ["#3e4c5a", "#4e5e6c"], mid: ["#2f4a3a", "#3c5a48", "#22382c"], bg: [60, 74, 90], rain: true, fireflies: true, lightning: true });
   const { fill, GY } = b;
   fill(0, GY, 174, 21, "#");
   b.spawn(3); b.cp(1);
@@ -275,6 +282,8 @@ function stormyFalls() {
   fill(150, 15, 150, 15, "M");
   fill(152, 10, 153, 10, "S");
   b.button(152, 9, "Z", { sync: "Z" });
+  b.bone(153, 9);
+  b.bone(75, 11);
   b.gate(156, GY, "Z", { latch: true });
   b.sign(144, 15, "Grab the key. Then one of you bounces up to the high button, and you press together!");
 
