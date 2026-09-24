@@ -1,5 +1,5 @@
 // Sunken Grotto
-export default ({ bearSit, wait, until, go, hop, use, call, attack, stop, gateOpen, P, B, T }) => {
+export default ({ follow, bearSit, wait, until, go, hop, use, call, attack, stop, gateOpen, P, B, T }) => {
   const swimUp = () => { // surface and hop out
     B.hold.otter.up = true;
     for (let i = 0; i < 40 && P.otter.inWater; i++) { B.tap.otter.jump = true; B.step(6); }
@@ -32,7 +32,7 @@ export default ({ bearSit, wait, until, go, hop, use, call, attack, stop, gateOp
       go({ fox: 41 });
       hop("fox", 42, { dj: true, up: 3.9 });
       go({ fox: 42 }); P.fox.facing = -1;
-      call("fox");
+      follow("fox");
       until(() => B.bear.ground === B.L.movers[0], 6, "Bear onto the fox's side");
       until(() => B.otter.y < 12 * T, 8, "otter lifted");
       go({ otter: 50 });
@@ -44,7 +44,7 @@ export default ({ bearSit, wait, until, go, hop, use, call, attack, stop, gateOp
       go({ fox: 41 });
       hop("fox", 44, { dj: true, noSettle: true });
       hop("fox", 48, { dj: true });
-      call("fox");
+      follow("fox");
       go({ otter: 56, fox: 55 }, 8);
     }],
     ["switch floor", () => {
@@ -102,7 +102,7 @@ export default ({ bearSit, wait, until, go, hop, use, call, attack, stop, gateOp
       until(() => gateOpen("E"), 4, "gate E");
     }],
     ["exit", () => {
-      call("fox");
+      follow("fox");
       go({ otter: 141, fox: 141 }, 10);
       until(() => B.won, 3, "win");
     }],

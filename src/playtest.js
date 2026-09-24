@@ -7,8 +7,11 @@ const B = window.__bot;
 // keep a short trail of positions so a failed step shows how it went wrong
 const trail = [];
 const step0 = B.step.bind(B);
-let fr = 0;
-B.step = (n = 1) => { for (let i = 0; i < n; i++) { step0(1); if (fr++ % 15 === 0) { trail.push([B.otter, B.fox, B.bear].map((c) => `${(c.x / 16).toFixed(1)},${(c.y / 16).toFixed(1)}`).join(' ')); if (trail.length > 60) trail.shift(); } } };
+let fr = 0, dSeen = 0;
+const recent = [];
+B.step = (n = 1) => { for (let i = 0; i < n; i++) { step0(1);
+  recent.push([B.otter, B.fox].map((c) => `${(c.x / 16).toFixed(1)},${(c.y / 16).toFixed(1)}`).join(' ')); if (recent.length > 40) recent.shift();
+  if (B.deaths > dSeen) { dSeen = B.deaths; log.push(`death in "${stepName}": ${recent.filter((_, k) => k % 5 === 0).join(' | ')}`); } if (fr++ % 15 === 0) { trail.push([B.otter, B.fox, B.bear].map((c) => `${(c.x / 16).toFixed(1)},${(c.y / 16).toFixed(1)}`).join(' ')); if (trail.length > 60) trail.shift(); } } };
 const P = { otter: B.otter, fox: B.fox };
 const log = [];
 let stepName = "";
@@ -59,15 +62,15 @@ function hop(w, tx, o = {}) {
   if (o.run) { until(() => { steer(w, px); return Math.abs(c.x - px) < Math.abs(o.run); }, 5, "run-up"); }
   B.hold[w].right = !o.up && px > c.x; B.hold[w].left = !o.up && px < c.x;
   tap(w, "jump");
-  let dj = false, dashed = false, t = 0;
+  let dj = false, dashed = false, t = 0, djT = 0;
   // o.up: rise straight up until this high above the take-off point (clears ledge lips)
   const y0 = c.y;
   until(() => {
     t++;
     const rising = o.up && y0 - c.y < o.up * T && c.vy < 0;
     const arrived = rising ? (stop(w), false) : steer(w, px);
-    if (o.dj && !dj && c.vy > (o.djAt ?? -20)) { dj = true; B.tap[w].jump = true; }
-    if (o.dash && dj && !dashed && c.vy > (o.dashAt ?? -40)) { dashed = true; c.facing = Math.sign(px - c.x) || c.facing; B.tap[w].special = true; }
+    if (o.dj && !dj && c.vy > (o.djAt ?? -20)) { dj = true; djT = t; B.tap[w].jump = true; }
+    if (o.dash && dj && t - djT > 8 && !dashed && c.vy > (o.dashAt ?? -40)) { dashed = true; c.facing = Math.sign(px - c.x) || c.facing; B.tap[w].special = true; }
     if (o.slam && c.vy > 0 && arrived && !c.slam) B.tap[w].special = true;
     return t > 4 && c.onGround;
   }, 5, `${w} hop to ${tx}`);
@@ -111,9 +114,23 @@ function cross(w, tx, jumpTiles = [], sec = 12) {
   }, sec, `${w} run to ${tx}`);
   stop(w);
 }
+// hunt down beetle #i: walk up to it and swipe
+function swat(w, i, sec = 8, maxTx = 9999) {
+  const c = P[w], e = B.enemies[i];
+  until(() => {
+    if (!e.alive) return true;
+    const dx = e.x + e.w / 2 - (c.x + c.w / 2);
+    if (Math.abs(dx) < 20 && Math.abs(e.y - c.y) < 16) { stop(w); c.facing = Math.sign(dx) || 1; B.tap[w].attack = true; }
+    else { B.hold[w].right = dx > 0 && c.x < maxTx * T; B.hold[w].left = dx < 0; }
+    return false;
+  }, sec, `${w} swats beetle ${i}`);
+  stop(w);
+}
+// make sure Bear is following w (a call next to a following Bear would make him sit instead)
+function follow(w) { if (B.bear.mode !== "follow" || B.bear.target !== P[w]) call(w); }
 const gateOpen = (ch) => B.L.gates.filter((g) => g.ch === ch).every((g) => g.open > 0.9);
 const onTile = (w, tx) => tileOf(w) === tx;
-const H = { cross, bearSit, wait, until, tap, stop, go, hop, ride, use, call, attack, bearStay, send, gateOpen, onTile, tileOf, bearTile, X, B, P, T };
+const H = { follow, swat, cross, bearSit, wait, until, tap, stop, go, hop, ride, use, call, attack, bearStay, send, gateOpen, onTile, tileOf, bearTile, X, B, P, T };
 
 function run(steps) {
   const t0 = performance.now();

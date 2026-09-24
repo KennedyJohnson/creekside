@@ -1,5 +1,5 @@
 // Clockwork Mill
-export default ({ bearSit, wait, until, go, hop, use, call, attack, stop, send, gateOpen, P, B, T }) => {
+export default ({ follow, bearSit, wait, until, go, hop, use, call, attack, stop, send, gateOpen, P, B, T }) => {
   const has = (art) => B.L.items.some((i) => i.art === art && (i.carrier || i.done));
   return [
     ["timed relay", () => {
@@ -20,7 +20,7 @@ export default ({ bearSit, wait, until, go, hop, use, call, attack, stop, send, 
       go({ otter: 56, fox: 54 }, 8);
       attack("otter", 1);
       go({ otter: 60, fox: 59 }, 8);
-      call("fox");
+      follow("fox");
       go({ otter: 64, fox: 62 }, 8);
     }],
     ["crate + stack on the lift", () => {
@@ -35,7 +35,7 @@ export default ({ bearSit, wait, until, go, hop, use, call, attack, stop, send, 
       go({ fox: 74 }, 4);
       until(() => has("KEY") && has("HOGLET"), 3, "key + hoglet");
       go({ fox: 76 }, 6);
-      call("fox");
+      follow("fox");
       go({ otter: 73 }, 6);
       go({ otter: 79, fox: 78 }, 8);
       until(() => B.friends >= 1, 3, "hoglet home");
@@ -48,7 +48,7 @@ export default ({ bearSit, wait, until, go, hop, use, call, attack, stop, send, 
       until(() => gateOpen("F"), 8, "workshop gates");
       hop("fox", 90); hop("otter", 90);
       go({ otter: 97, fox: 98 }, 8);
-      call("fox");
+      follow("fox");
     }],
     ["belt + heavy scale", () => {
       go({ otter: 100, fox: 101 }, 8);
@@ -69,7 +69,7 @@ export default ({ bearSit, wait, until, go, hop, use, call, attack, stop, send, 
       stop("otter", "fox");
       go({ otter: 124 }); bearSit("otter", 125); go({ fox: 126 });
       until(() => gateOpen("H"), 4, "gate H");
-      call("fox");
+      follow("fox");
       go({ otter: 139, fox: 139 }, 10);
       until(() => B.won, 3, "win");
     }],

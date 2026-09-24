@@ -1,5 +1,5 @@
 // Frozen Lake
-export default ({ cross, bearSit, wait, until, go, hop, use, call, stop, gateOpen, P, B, T }) => {
+export default ({ follow, cross, bearSit, wait, until, go, hop, use, call, stop, gateOpen, P, B, T }) => {
   const has = (art) => B.L.items.some((i) => i.art === art && (i.carrier || i.done));
   return [
     ["frozen lake", () => {
@@ -30,7 +30,7 @@ export default ({ cross, bearSit, wait, until, go, hop, use, call, stop, gateOpe
       go({ otter: 81, fox: 83 }, 6);
     }],
     ["heavy crate stack", () => {
-      call("fox");
+      follow("fox");
       go({ otter: 84, fox: 85 });
       B.hold.otter.right = B.hold.fox.right = true;
       until(() => B.L.blocks[1].x >= 95 * T, 12, "heavy crate under the perch");

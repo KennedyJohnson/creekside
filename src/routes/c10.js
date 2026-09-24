@@ -1,5 +1,5 @@
 // Thunder Peak
-export default ({ cross, bearSit, wait, until, go, hop, use, call, stop, gateOpen, P, B, T }) => {
+export default ({ follow, cross, bearSit, wait, until, go, hop, use, call, stop, gateOpen, P, B, T }) => {
   const has = (art) => B.L.items.some((i) => i.art === art && (i.carrier || i.done));
   const ride = (w, colTx, landTx) => { // hop into a fan column, float up, drift onto a ledge
     const c = P[w];
@@ -44,10 +44,10 @@ export default ({ cross, bearSit, wait, until, go, hop, use, call, stop, gateOpe
       go({ fox: 53 }); use("fox");       // release the heavy crate onto A
       until(() => Math.abs(B.L.movers[0].y - 13 * T) < 1 && Math.abs(B.L.movers[1].y - 13 * T) < 1, 6, "scale balanced");
       go({ otter: 51 }); P.otter.facing = 1;
-      call("otter");                      // here, Bear! (he steps onto A and tips the scale)
+      follow("otter");                      // here, Bear! (he steps onto A and tips the scale)
       until(() => B.L.movers[1].y <= 7 * T + 1, 6, "B up");
       go({ otter: 57, fox: 58 }, 6);
-      call("fox");
+      follow("fox");
       go({ otter: 68, fox: 69 }, 8);
     }],
     ["fans", () => {
@@ -61,7 +61,7 @@ export default ({ cross, bearSit, wait, until, go, hop, use, call, stop, gateOpe
       ride("fox", 79, 82);
       use("otter");                                 // blue fans again
       ride("fox", 85, 88);
-      call("fox");
+      follow("fox");
       go({ otter: 95, fox: 94 }, 6);
       cross("otter", 103); go({ fox: 104 }, 6);
       go({ otter: 106 }, 6);
@@ -77,7 +77,7 @@ export default ({ cross, bearSit, wait, until, go, hop, use, call, stop, gateOpe
       go({ otter: 120 }, 8);
       bearSit("fox", 119);
       until(() => gateOpen("E"), 4, "gate E");
-      call("fox");
+      follow("fox");
       go({ otter: 141, fox: 141 }, 10);
       until(() => B.won, 3, "win");
     }],

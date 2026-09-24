@@ -1,5 +1,5 @@
 // Creekside
-export default ({ bearSit, wait, until, go, hop, use, call, attack, bearStay, send, gateOpen, P, B, T, tileOf }) => [
+export default ({ follow, bearSit, wait, until, go, hop, use, call, attack, bearStay, send, gateOpen, P, B, T, tileOf }) => [
   ["beetle + bone", () => {
     go({ otter: 9, fox: 8 });
     hop("otter", 11); // bone on the step
@@ -19,7 +19,7 @@ export default ({ bearSit, wait, until, go, hop, use, call, attack, bearStay, se
     bearSit("otter", 35);
     go({ otter: 36 }); wait(0.5);
     until(() => gateOpen("B"), 4, "gate B");
-    go({ otter: 40, fox: 39 }); call("fox");
+    go({ otter: 40, fox: 39 }); follow("fox");
   }],
   ["creek lever + duckling", () => {
     go({ otter: 44, fox: 43 });
@@ -69,7 +69,7 @@ export default ({ bearSit, wait, until, go, hop, use, call, attack, bearStay, se
     until(() => gateOpen("E"), 4, "gate E");
   }],
   ["key + exit", () => {
-    call("fox");
+    follow("fox");
     go({ otter: 146, fox: 144 }, 10);
     hop("fox", 146);
     wait(0.3);

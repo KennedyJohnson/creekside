@@ -399,6 +399,8 @@ function move(b, d, axis, rects) {
     if (r === b || !overlaps(b, r)) continue;
     // riding a rising platform leaves a sliver of overlap: that's floor contact, not a wall
     if (axis === "x" && Math.min(b.y + b.h - r.y, r.y + r.h - b.y) < 1) continue;
+    // ...and a sub-pixel corner is not something to stand on
+    if (axis === "y" && Math.min(b.x + b.w - r.x, r.x + r.w - b.x) < 1) continue;
     if (axis === "x") b.x = d > 0 ? r.x - b.w : r.x + r.w;
     else b.y = d > 0 ? r.y - b.h : r.y + r.h;
     hit = r;
@@ -672,7 +674,10 @@ function updateBear(dt, rects) {
     const floorAt = (tx, ty) => solidTile(tx, ty) || rects.some((r) => overlaps({ x: tx * T + 2, y: ty * T, w: 12, h: T }, r));
     let drop = 0; while (drop < 6 && !floorAt(ahead, feet + drop) && tileAt(ahead, feet + drop) !== "W") drop++;
     const wet = tileAt(ahead, feet + drop) === "W";
-    if (wet || drop >= 6) {
+    // a little gap with floor just beyond: hop it
+    const dir = Math.sign(wantX), hopGap = [1, 2].some((k) => floorAt(ahead + dir * k, feet) && !floorAt(ahead + dir * k, feet - 1));
+    if ((wet || drop >= 6) && hopGap) b.vy = -SPEC.bear.jump;
+    else if (wet || drop >= 6) {
       if (wet && Math.random() < 0.004) bubble(pick(["*whimpers* Bear doesn't like water...", "Bear won't go in the water!"]));
       wantX = 0;
       if (b.mode === "send") { b.mode = "stay"; bubble(wet ? "*refuses to go near the water*" : "*sits at the edge*"); }
@@ -745,6 +750,7 @@ function pushBlock(b, dx, rects, power, depth) {
   const x0 = b.x;
   move(b, dx, "x", rects.filter((r) => r !== b));
   const moved = b.x - x0;
+  if (moved) b.nudged = 0.1; // being shoved: don't settle onto the grid yet
   if (moved) for (const o of L.blocks)
     if (o !== b && Math.abs(o.y + o.h - b.y) < 2 && o.x < b.x + b.w && o.x + o.w > b.x) pushBlock(o, moved, rects, 9, depth + 1);
   return moved;
@@ -817,10 +823,10 @@ function updateWorld(dt, rects) {
       const pair = L.movers.filter((o) => o.pulley === m.pulley);
       const wA = weightOn(pair[0]), wB = weightOn(pair[1]);
       tx = m.x0; ty = m.y0 + m.side * Math.sign(wA - wB) * m.range;
-    } else if (m.riders) {
-      const n = weightOn(m, true), up = n >= m.riders;
+    } else if (m.riders || m.load) { // lifts that need so many riders, or so much weight (crates too)
+      const need = m.riders || m.load, n = weightOn(m, !m.load), up = n >= need;
       tx = m.x0; ty = up ? m.y1 : m.y0;
-      if (n > 0 && !up && m.y === m.y0 && toastT <= 0) toast(`Lift: ${n}/${m.riders} aboard`, 1);
+      if (n > 0 && !up && m.y === m.y0 && toastT <= 0) toast(m.load ? `Lift: weight ${n}/${need}` : `Lift: ${n}/${need} aboard`, 1);
     } else if (m.ch) { const on = channel(m.ch) > 0; tx = on ? m.x1 : m.x0; ty = on ? m.y1 : m.y0; }
     else {
       tx = m.dir > 0 ? m.x1 : m.x0; ty = m.dir > 0 ? m.y1 : m.y0;
@@ -845,6 +851,8 @@ function updateWorld(dt, rects) {
     // ...but never while riding a platform (a sinking pulley would otherwise shove it off)
     const onPlatform = L.movers.some((m) => b.x < m.x + m.w && b.x + b.w > m.x && m.y >= b.y + b.h - 3 && m.y <= b.y + b.h + 24);
     if (b.grounded && !onPlatform && !filled(cx, below)) { let c0 = cx; while (!filled(c0 - 1, below) && cx - c0 < 4) c0--; b.x = c0 * T; }
+    // a crate left resting a hair off the grid settles onto it (so crates in gaps line up)
+    else if (b.grounded && !onPlatform && !((b.nudged -= dt) > 0) && Math.abs(b.x - Math.round(b.x / T) * T) < 2) b.x = Math.round(b.x / T) * T;
     const hitY = move(b, b.vy * dt, "y", others);
     b.grounded = !!hitY && b.vy >= 0;
     if (hitY === "tile") { // crates ride conveyors too

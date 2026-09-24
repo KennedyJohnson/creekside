@@ -69,14 +69,13 @@ function creekside() {
   b.plate(23, 15, "A"); b.gate(28, GY, "A"); b.plate(32, 15, "A");
   b.sign(21, 15, "A pressure plate holds the gate open, but only while someone stands on it.");
   b.plate(35, 15, "B"); b.gate(38, GY, "B");
-  b.sign(34, 15, "Only one plate here... and three of you. Who's a good boy?");
 
   fill(42, GY, 63, 21, "#");
   fill(45, GY, 60, 20, "W");
   b.lever(52, 20, "C");
   b.bridge(45, 60, 15, "C");
   b.cp(42);
-  b.sign(43, 15, "Red pandas can't swim, but otters love it. Something is glinting at the bottom... (□ uses levers)");
+  b.sign(43, 15, "Red pandas can't swim, but otters love it. (□ uses levers)");
   const duck = b.npc("MAMA_DUCK", 62, 15, "Mama Duck", "Quack! My duckling paddled off and got stuck at the bottom of the creek!", "Quack quack! Thank you, thank you!");
   b.item("DUCKLING", 57, 20, duck);
 
@@ -86,19 +85,19 @@ function creekside() {
   fill(70, 11, 114, 21, "#");
   b.lever(73, 10, "D");
   b.cp(64);
-  b.sign(65, 15, "Too high for anyone alone. Maybe the red panda could hop off the otter's head?");
+  b.sign(65, 15, "You can stand on each other's heads!");
 
   fill(92, 0, 106, 7, "S");
   b.boulder(95, 10);
   fill(101, 11, 103, 13, ".");
   fill(101, 13, 103, 13, "^");
   b.cp(74);
-  b.sign(89, 10, "A mossy boulder blocks the tunnel. Far too heavy for one... push together!");
+  b.sign(89, 10, "Some things are too heavy for one. Push together!");
 
   fill(115, 12, 116, 15, "#"); fill(117, 14, 118, 15, "#");
   fill(115, GY, 159, 21, "#");
   b.cp(119);
-  b.sign(120, 15, "Three plates. Three friends. The gate stays open once all three are pressed.");
+  b.sign(120, 15, "This gate opens for good once all three plates are pressed at the same time.");
   b.plate(123, 15, "E");
   fill(128, 12, 131, 12, "S");
   b.plate(129, 11, "E");
@@ -107,7 +106,7 @@ function creekside() {
   b.cp(143);
   fill(147, 11, 149, 11, "S");
   b.item("KEY", 148, 10);
-  b.sign(145, 15, "The den is locked. The key is on that high ledge. Stack up to reach it, then carry it to the door together!");
+  b.sign(145, 15, "The den is locked. Find the key! (If a puzzle goes wrong: Options → Back to checkpoint resets it.)");
   b.exit(153, GY);
   return b.L;
 }
@@ -129,12 +128,10 @@ function mossyHollow() {
   b.crate(25, 15);
   b.plate(29, 15, "A"); b.plate(31, 15, "A");
   b.gate(34, GY, "A", { need: 2 });
-  b.sign(22, 15, "This gate needs BOTH plates pressed... and you both need to get through.");
 
   b.cp(36);
   b.crate(38, 15); b.crate(40, 15);
   fill(44, 16, 47, 16, "^");
-  b.sign(37, 15, "Thorns! Too far for the otter to jump. Fill the gap with crates.");
 
   fill(49, 0, 49, 12, "S"); fill(49, 13, 49, 15, "B");
   b.sign(48, 15, "Brambles block the way. Swipe them with ○!");
@@ -144,12 +141,12 @@ function mossyHollow() {
   fill(59, 14, 60, 15, "#");
   b.beetle(63, 15);
   b.gate(68, GY, "T");
-  b.sign(54, 15, "Timed button (□)! The gate only stays open a few seconds. Ready... set... GO!");
+  b.sign(54, 15, "Red buttons (□) only stay pressed for a few seconds.");
 
   b.cp(70);
   b.heavy(74, 15);
   fill(84, 12, 97, 15, "#");
-  b.sign(71, 15, "A heavy crate. Push it together up against the ledge, then climb.");
+  b.sign(71, 15, "Heavy crates take two to push.");
 
   b.cp(86);
   fill(104, 14, 112, 15, "#"); fill(106, 15, 111, 15, "."); fill(104, 15, 105, 15, "D"); fill(112, 15, 112, 15, "D");
@@ -158,29 +155,31 @@ function mossyHollow() {
   b.bone(107, 15);
 
   b.cp(114);
-  fill(122, 14, 128, 15, "#"); fill(124, 15, 127, 15, "."); fill(122, 15, 123, 15, "D");
-  b.plate(127, 15, "B");
+  // a crate perched on a soft-dirt pillar, right above the gate's plate
+  fill(121, 9, 121, 12, "S"); fill(123, 9, 123, 12, "S");
+  fill(122, 12, 122, 15, "D");
+  b.crate(122, 11);
+  b.plate(122, 15, "B");
   b.gate(132, GY, "B");
-  b.sign(119, 15, "This gate's plate is sealed inside that mound. Send Bear in!");
   b.beetle(137, 15); b.beetle(141, 15);
 
   b.cp(143);
   // conveyor gauntlet: the belt drags you back while spikes pop up and down
   fill(147, 16, 158, 16, "<");
   fill(150, 15, 150, 15, "T"); fill(153, 15, 153, 15, "T"); fill(156, 15, 156, 15, "T");
-  b.sign(145, 15, "A conveyor belt that pulls you backward, and spikes that pop up and down. Time it!");
+  b.sign(145, 15, "Conveyor belts push you along. Spikes pop up and down.");
   b.beetle(162, 15);
   b.cp(160);
   b.heavy(163, 15);
   b.plate(170, 15, "H", { need: 2, w: 2 });
   fill(172, 15, 172, 15, "S");
   b.gate(175, GY, "H");
-  b.sign(161, 15, "A heavy plate (red) needs lots of weight. What's the heaviest thing around?");
+  b.sign(161, 15, "Red plates need extra weight.");
   b.cp(177);
   fill(180, 16, 184, 16, "X");
   fill(180, 17, 188, 19, ".");
   b.exit(186, 20);
-  b.sign(178, 15, "Home is down in the hollow, under this cracked rock. Otter: jump, then R2 to SLAM!");
+  b.sign(178, 15, "Home is down in the hollow, under this cracked rock.");
   return b.L;
 }
 
@@ -217,18 +216,17 @@ function windyRidge() {
   b.plate(88, 9, "F");
   b.gate(92, GY, "F", { pillar: false });
   b.beetle(97, 15);
-  b.sign(78, 9, "A doggy door! Only Bear fits. Stand next to him and press □ to send him through.");
+  b.sign(78, 9, "A doggy door! Only Bear fits. (□ next to Bear sends him ahead.)");
 
   fill(101, GY, 181, 21, "#");
   b.cp(102);
   fill(106, 16, 112, 19, "."); fill(106, 19, 112, 19, "^");
   b.lever(114, 15, "G");
   b.bridge(106, 112, 15, "G");
-  b.sign(103, 15, "Way too far to jump... unless you're a red panda. Red panda: jump, then R2 in mid-air to DASH!");
+  b.sign(103, 15, "Red panda: jump, then R2 in mid-air to DASH!");
 
   b.cp(116);
   fill(119, 11, 121, 11, "S");
-  b.sign(118, 15, "Something orange is stuck on that high ledge. Stack up!");
   fill(126, 16, 128, 16, ".");
   b.mover({ x0: 126 * T, y0: 16 * T, x1: 126 * T, y1: 8 * T, w: 3 * T, speed: 30 });
   fill(129, 8, 141, 15, "#");
@@ -251,8 +249,8 @@ function windyRidge() {
   fill(187, 17, 187, 21, "#"); fill(187, 16, 187, 16, "G");
   fill(190, 13, 211, 21, "#");
   fill(168, 16, 169, 16, "#");
-  b.lever(192, 12, "W");
-  b.sign(165, 15, "Updrafts! Ride the gray fans to the ledge, then have your partner flip the lever for the blue ones.");
+  b.lever(190, 12, "W");
+  b.sign(165, 15, "Updrafts! A lever swaps which fans blow.");
   b.cp(193);
   b.exit(203, 13);
   return b.L;
@@ -271,19 +269,17 @@ function stormyFalls() {
   fill(26, 12, 29, 12, "S");
   b.button(28, 11, "S", { sync: "S" });
   b.gate(33, GY, "S", { latch: true });
-  b.sign(10, 15, "Two buttons, far apart. Press them at the SAME time! Count down together: 3... 2... 1...");
+  b.sign(10, 15, "Blue buttons have to be pressed at the same time. Count down together: 3... 2... 1...");
 
   b.cp(35);
   b.crate(38, 15);
   b.plate(44, 15, "P"); b.plate(46, 15, "P");
   b.gate(49, GY, "P", { need: 2 });
-  b.sign(36, 15, "Two plates, one crate... and one very good boy.");
 
   b.cp(51);
   b.crate(52, 15);
   fill(55, 16, 57, 16, "^");
   fill(59, 0, 59, 12, "S"); fill(59, 13, 59, 15, "B");
-  b.sign(58, 15, "Brambles, then a log, crumbly rocks and a mushroom. Go go go!");
   b.beetle(61, 15);
   fill(62, 16, 79, 18, "."); fill(62, 19, 79, 19, "^");
   b.mover({ x0: 62 * T, y0: 16 * T, x1: 68 * T, y1: 16 * T, w: 3 * T, speed: 40 });
@@ -300,7 +296,6 @@ function stormyFalls() {
   fill(114, 0, 115, 12, "S"); fill(114, 13, 115, 15, "D");
   b.plate(112, 15, "H"); b.plate(113, 15, "H");
   b.gate(120, GY, "H", { need: 2 });
-  b.sign(102, 15, "Heavy crate, sealed tunnel, locked gate. You'll need all three of you.");
 
   b.cp(122);
   b.beetle(127, 15);
@@ -309,7 +304,6 @@ function stormyFalls() {
   b.bridge(128, 135, 15, "Q");
   const shelly = b.npc("TURTLE", 138, 15, "Shelly", "My hatchling sank to the bottom of the pond! I'm much too slow to reach...", "Oh, my little one! Bless you both.");
   b.item("BABY_TURTLE", 133, 19, shelly);
-  b.sign(125, 15, "The button raises the bridge for a moment. Otters can swim down for the hatchling.");
 
   fill(141, 11, 143, 11, "S");
   b.item("KEY", 142, 10);
@@ -321,7 +315,6 @@ function stormyFalls() {
   b.bone(153, 9);
   b.bone(75, 11);
   b.gate(156, GY, "Z", { latch: true });
-  b.sign(144, 15, "Grab the key. Then one of you bounces up to the high button, and you press together!");
 
   b.cp(158);
   // storm drain: a belt shoving you toward thorns while spikes pop in a wave
@@ -329,12 +322,12 @@ function stormyFalls() {
   fill(177, 16, 178, 18, "."); fill(177, 18, 178, 18, "^");
   fill(163, 15, 163, 15, "T"); fill(168, 15, 168, 15, "T"); fill(173, 15, 173, 15, "T");
   b.beetle(174, 15);
-  b.sign(159, 15, "The storm drain! The belt shoves you toward a thorn pit. Dodge the spikes, then leap!");
+  b.sign(159, 15, "The storm drain!");
   b.cp(181);
   fill(184, 16, 188, 16, "X");
   fill(184, 17, 192, 19, ".");
   b.exit(190, 20);
-  b.sign(182, 15, "The den is under the cracked rock. Otter, SLAM! (Don't forget the key.)");
+  b.sign(182, 15, "The den is under the cracked rock. (Don't forget the key.)");
   return b.L;
 }
 
@@ -359,15 +352,14 @@ function lanternCaves() {
   fill(24, 3, 24, 13, "O");
   b.gate(24, GY, "B", { pillar: false, rows: 2 });
   b.plate(28, 15, "B");
-  b.sign(8, 15, "Red panda: hop on the step and walk through the red wall. Then hold the plate for the otter!");
 
   // pulley: the heavier side sinks
   b.cp(29);
   b.crate(33, 15);
-  fill(36, 16, 41, 21, ".");
-  b.pulley(36, 39, 16, 6 * T);
-  fill(42, 10, 60, 21, "#");
-  b.sign(31, 15, "A pulley! The heavier platform sinks and the other one rises. Crates and Bear count as weight too.");
+  fill(36, 16, 41, 18, ".");
+  b.pulley(36, 39, 16, 2.75 * T);
+  fill(42, 12, 50, 21, "#"); fill(51, 10, 60, 21, "#");
+  b.sign(31, 15, "A pulley: the heavier side sinks and the other rises.");
   b.bone(57, 9);
 
   // switch blocks: flip the lever to swap which blocks are solid
@@ -377,7 +369,7 @@ function lanternCaves() {
   fill(61, 10, 66, 10, "r"); fill(67, 10, 67, 10, "S"); fill(68, 10, 72, 10, "u"); fill(73, 10, 73, 10, "S"); fill(74, 10, 80, 10, "r");
   fill(81, 10, 95, 21, "#");
   b.lever(82, 9, "K");
-  b.sign(56, 9, "Switch blocks! The lever swaps pink and blue. Wait on the stone steps and call out when to flip it.");
+  b.sign(56, 9, "Switch blocks: a lever swaps which color is solid.");
 
   // two-seat lift
   b.cp(83);
@@ -401,45 +393,42 @@ function lanternCaves() {
   b.gate(145, GY, "Z", { pillar: false, rows: 2, latch: true });
   b.button(141, 15, "Z", { sync: "Z" });
   b.button(148, 15, "Z", { sync: "Z" });
-  b.sign(132, 15, "The key is behind an otter wall. Then: one button on each side of the red wall, pressed together!");
   b.cp(150);
   // ice cave: slippery floor over thorn slots, then a two-crate heavy plate
   fill(152, 16, 175, 16, "I");
   fill(157, 16, 157, 16, "^"); fill(163, 16, 164, 16, "^"); fill(170, 16, 170, 16, "^");
-  b.sign(151, 15, "Ice! You'll slide. Hop the thorn slots, and don't overshoot.");
+  b.sign(151, 15, "Ice! You'll slide.");
   b.beetle(167, 15);
   b.cp(177);
   b.crate(178, 15); b.crate(180, 15);
   b.plate(186, 15, "Q", { need: 2, w: 2 });
   fill(188, 15, 188, 15, "S");
   b.gate(191, GY, "Q");
-  b.sign(179, 15, "A heavy plate (red). Two crates side by side should do it... push them together!");
   b.exit(195, GY);
   return b.L;
 }
 
 // ------------------------------------------------------------------ Chapter 6
 function starrySummit() {
-  const b = builder(205, "Chapter 6 · Starry Summit", "The final climb. Every trick you know, together, under the stars.",
+  const b = builder(205, "Chapter 6 · Starry Summit", "A long climb under the stars.",
     { sky: ["#0e1a3a", "#2b3f73", "#6a6fa8"], far: ["#2b3658", "#39466b"], mid: ["#1f2f4a", "#2a3d5c", "#16233a"], bg: [20, 30, 60], fireflies: true, stars: true });
   const { fill, GY } = b;
   fill(0, GY, 204, 21, "#");
   b.spawn(3); b.cp(1);
-  b.sign(2, 15, "Starry Summit. The last climb! Stick together.");
+  b.sign(2, 15, "Starry Summit. Stick together.");
 
   // crumble + switch-block bridge over the void
   fill(12, 16, 31, 21, ".");
   fill(12, 16, 15, 16, "C"); fill(16, 16, 16, 16, "S"); fill(17, 16, 21, 16, "u"); fill(22, 16, 22, 16, "S");
   fill(23, 16, 27, 16, "r"); fill(28, 16, 28, 16, "S"); fill(29, 16, 31, 16, "C");
   b.lever(10, 15, "K"); b.lever(33, 15, "K");
-  b.sign(7, 15, "Crumbly rocks AND switch blocks. One crosses while the other works the lever, then swap!");
 
   // everyone aboard
   b.cp(33);
   fill(37, 16, 39, 16, ".");
   b.mover({ x0: 37 * T, y0: 16 * T, x1: 37 * T, y1: 8 * T, w: 3 * T, riders: 3, speed: 30 });
   fill(40, 8, 57, 21, "#");
-  b.sign(35, 15, "Everyone aboard! This lift needs all three of you. Tell Bear to stay on it (△ twice).");
+  b.sign(35, 15, "This lift needs three riders.");
 
   // synced buttons across a red-panda wall
   b.cp(41);
@@ -448,7 +437,6 @@ function starrySummit() {
   b.gate(49, 8, "Z", { pillar: false, rows: 2, latch: true });
   b.button(45, 7, "Z", { sync: "Z" });
   b.button(52, 7, "Z", { sync: "Z" });
-  b.sign(43, 7, "Red panda through the red wall, otter stays here. Press your buttons at the same time!");
 
   // moving log, floating island, goat kid
   fill(58, 16, 88, 21, ".");
@@ -460,13 +448,13 @@ function starrySummit() {
   b.item("GOAT_KID", 84, 5, pippa);
   b.beetle(100, 7);
 
-  // final pulley: heavy crate + Bear outweigh both of you
+  // the summit lift only rises under a heavy load (crates count, and so does anyone aboard)
   b.cp(91);
-  b.heavy(113, 15);
-  fill(116, 16, 121, 21, ".");
-  b.pulley(116, 119, 16, 8 * T);
-  fill(122, 8, 165, 21, "#");
-  b.sign(111, 15, "The summit! Push the heavy crate onto the left platform, add Bear... then hop on the right one together.");
+  b.heavy(112, 15);
+  fill(116, 16, 118, 16, ".");
+  b.mover({ x0: 116 * T, y0: 16 * T, x1: 116 * T, y1: 8 * T, w: 3 * T, load: 5, speed: 30 });
+  fill(119, 8, 165, 21, "#");
+  b.sign(110, 15, "This lift only rises under a heavy load.");
 
   b.cp(124);
   b.bone(126, 7);
@@ -477,7 +465,6 @@ function starrySummit() {
   b.sign(127, 7, "The icy ridge! Slippery, spiky, and the beetles don't slip at all.");
   fill(163, 7, 163, 7, "F");
   fill(166, 4, 204, 21, "#");
-  b.sign(161, 7, "One last updraft, up to the peak!");
   b.cp(168);
   b.npc("RIGBY", 190, 3, "Rigby", "ARF! You made it to the top! Bear told me ALL about you two!", "ARF! You made it to the top! Bear told me ALL about you two!");
   b.exit(196, 4);
