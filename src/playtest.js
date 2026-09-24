@@ -100,9 +100,20 @@ function bearSit(w, tx, sec = 10) {
   if (B.bear.mode !== "stay") throw new Error("Bear didn't sit");
 }
 function send(w, dir) { P[w].facing = dir; stop(w); wait(0.05); P[w].facing = dir; use(w); }
+// run right to tile tx, hopping each hazard tile in jumpTiles and swiping beetles on the way
+function cross(w, tx, jumpTiles = [], sec = 12) {
+  const c = P[w];
+  B.hold[w].right = true;
+  until(() => {
+    if (c.onGround && jumpTiles.some((t) => { const g = t * T - (c.x + c.w); return g >= 0 && g < 7; })) B.tap[w].jump = true;
+    if (B.enemies.some((e) => e.alive && e.x > c.x && e.x - (c.x + c.w) < 12 && Math.abs(e.y - c.y) < 16)) { c.facing = 1; B.tap[w].attack = true; }
+    return c.x >= X(w, tx) && c.onGround;
+  }, sec, `${w} run to ${tx}`);
+  stop(w);
+}
 const gateOpen = (ch) => B.L.gates.filter((g) => g.ch === ch).every((g) => g.open > 0.9);
 const onTile = (w, tx) => tileOf(w) === tx;
-const H = { bearSit, wait, until, tap, stop, go, hop, ride, use, call, attack, bearStay, send, gateOpen, onTile, tileOf, bearTile, X, B, P, T };
+const H = { cross, bearSit, wait, until, tap, stop, go, hop, ride, use, call, attack, bearStay, send, gateOpen, onTile, tileOf, bearTile, X, B, P, T };
 
 function run(steps) {
   const t0 = performance.now();

@@ -668,7 +668,9 @@ function updateBear(dt, rects) {
   // Bear is scared of water and won't walk off big drops
   if (wantX && b.onGround) {
     const ahead = Math.floor((b.x + b.w / 2 + Math.sign(wantX) * 12) / T), feet = Math.floor((b.y + b.h + 2) / T);
-    let drop = 0; while (drop < 6 && !solidTile(ahead, feet + drop) && tileAt(ahead, feet + drop) !== "W") drop++;
+    // lifts, bridges and crates count as floor too
+    const floorAt = (tx, ty) => solidTile(tx, ty) || rects.some((r) => overlaps({ x: tx * T + 2, y: ty * T, w: 12, h: T }, r));
+    let drop = 0; while (drop < 6 && !floorAt(ahead, feet + drop) && tileAt(ahead, feet + drop) !== "W") drop++;
     const wet = tileAt(ahead, feet + drop) === "W";
     if (wet || drop >= 6) {
       if (wet && Math.random() < 0.004) bubble(pick(["*whimpers* Bear doesn't like water...", "Bear won't go in the water!"]));
@@ -695,7 +697,8 @@ function updateBear(dt, rects) {
       }
     }
   }
-  if (b.mode === "follow" && b.onGround && t.y < b.y - 20 && Math.abs(t.x - b.x) < 30 && t.onGround) b.vy = -SPEC.bear.jump;
+  // hop up after them (but not after someone riding a lift or scale: he'd just bounce off it)
+  if (b.mode === "follow" && b.onGround && t.y < b.y - 20 && Math.abs(t.x - b.x) < 30 && t.onGround && !L.movers.includes(t.ground)) b.vy = -SPEC.bear.jump;
   if (inWaterAt(b)) bearToSafety("Yelp! Bear hates water! 💦");
   else if (onThorns(b) || b.y > LH + 40) bearToSafety("Yip!");
   if (wantX) b.facing = Math.sign(wantX);
@@ -750,11 +753,10 @@ function pushBlock(b, dx, rects, power, depth) {
 function weightOn(m, ridersOnly) {
   // lifts count anyone on or just above them (so hopping around doesn't drop the lift)
   const above = { x: m.x, y: m.y - 30, w: m.w, h: 31 };
-  let w = [otter, fox, bear].filter((c) => c.dead <= 0 && (c.ground === m || (ridersOnly && overlaps(c, above)))).length;
-  if (!ridersOnly) {
-    const strip = { x: m.x, y: m.y - 3, w: m.w, h: 4 };
-    L.blocks.forEach((b) => { if (overlaps(b, strip)) w += b.need; });
-  }
+  const strip = { x: m.x, y: m.y - 3, w: m.w, h: 4 };
+  const loaded = L.blocks.filter((b) => overlaps(b, strip)); // crates resting on it (anyone on those counts too)
+  let w = [otter, fox, bear].filter((c) => c.dead <= 0 && (c.ground === m || (!ridersOnly && loaded.includes(c.ground)) || (ridersOnly && overlaps(c, above)))).length;
+  if (!ridersOnly) loaded.forEach((b) => (w += b.need));
   return w;
 }
 let friends = 0, bones = 0, syncFailT = 0;
@@ -1013,16 +1015,19 @@ const MENU = [
   { label: "Speech bubbles", key: "bubbles" },
   { label: "Warp red panda to otter", act: () => warpTo(fox, otter) },
   { label: "Warp otter to red panda", act: () => warpTo(otter, fox) },
-  { label: "Back to checkpoint (both)", act: () => { respawn(otter); respawn(fox); resetSectionBlocks(); setPause(false); } },
+  { label: "Back to checkpoint (resets this puzzle)", act: () => { respawn(otter); respawn(fox); resetSectionBlocks(); setPause(false); } },
   { label: "Restart chapter", act: () => gotoChapter(chapter) },
   { label: "Unlock all chapters", act: () => { try { localStorage.setItem("creekside.unlocked", String(LEVELS.length)); } catch {} unlocked = LEVELS.length; toast("All chapters unlocked! Pick any from Chapter select.", 2.5); setPause(false); } },
   { label: "Swap who plays who", act: () => { setSwap(!swapPlayers); toast(`Player 1 is now the ${swapPlayers ? "red panda" : "otter"}!`, 2); setPause(false); } },
   { label: "Chapter select", act: () => { location.hash = ""; location.reload(); } },
 ];
 let menuSel = 0, prevState = "play", playTime = 0;
-// crates that started in the current section (checkpoint -> next checkpoint) go back home
+// crates that started in the current section (checkpoint -> next checkpoint) go back home,
+// and that section's levers flip back, so a botched puzzle can always be retried
 function resetSectionBlocks() {
   const from = L.checkpoints[cpIdx].tx * T, to = (L.checkpoints[cpIdx + 1]?.tx ?? L.W) * T;
+  L.levers.forEach((l) => { if (l.kind === "lever" && l.x >= from && l.x < to) l.on = false; });
+  L.movers.forEach((m) => { if (m.ch && m.x0 >= from && m.x0 < to) { m.x = m.x0; m.y = m.y0; } });
   L.blocks.forEach((b) => { if (b.hx >= from && b.hx < to) { b.x = b.hx; b.y = b.hy; b.vy = 0; } });
 }
 // stuck? pull one animal over to the other (keeps whatever they're carrying)

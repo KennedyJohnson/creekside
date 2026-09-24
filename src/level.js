@@ -599,4 +599,106 @@ function clockworkMill() {
   return b.L;
 }
 
-LEVELS.push(lanternCaves, starrySummit, sunkenGrotto, clockworkMill);
+// ------------------------------------------------------------------ Chapter 9
+function frozenLake() {
+  const b = builder(125, "Chapter 9 Â· Frozen Lake", "Slippery ice, crumbling snow bridges and a key up high.",
+    { sky: ["#8fb8d8", "#cfe3f2", "#f2f8fc"], far: ["#b3cbe0", "#c6d9e9"], mid: ["#8cabc4", "#a2bfd4", "#6d8fa8"], bg: [185, 212, 232], leaves: "#ffffff", wind: 1 });
+  const { fill, GY } = b;
+  fill(0, GY, 124, 21, "#");
+  b.spawn(3); b.cp(1);
+  b.sign(4, 15, "Frozen Lake. Brrr!");
+
+  // the frozen lake: slide between the thorn holes
+  fill(7, 16, 30, 16, "I");
+  fill(12, 16, 12, 16, "^"); fill(18, 16, 19, 16, "^"); fill(25, 16, 25, 16, "^");
+  b.beetle(22, 15);
+
+  // a crate caged on switch blocks above a plate, and a switch-block door
+  b.cp(31);
+  fill(32, 15, 32, 15, "M");
+  fill(33, 10, 35, 10, "S");
+  b.lever(34, 9, "K");
+  fill(38, 11, 38, 12, "S"); fill(40, 11, 40, 12, "S"); fill(39, 12, 39, 12, "r");
+  b.crate(39, 11);
+  b.plate(39, 15, "A");
+  fill(43, 0, 43, 12, "S"); fill(43, 13, 43, 15, "u");
+  b.gate(47, GY, "A");
+  b.bone(34, 9);
+
+  // a crumbling snow bridge with a gate halfway: one button on each bank
+  b.button(48, 15, "B", { timer: 2.2 });
+  b.cp(49);
+  fill(54, 16, 67, 17, "."); fill(54, 17, 67, 17, "^"); fill(54, 16, 67, 16, "C");
+  b.gate(63, GY, "B");
+  b.button(69, 15, "B", { timer: 2.2 });
+  const mo = b.npc("OWL", 74, 15, "Mo", "Hoo... my owlet flew up to the icicle perch and her wings are frozen stiff!", "Hoo-hoo! Warm and safe. Thank you!");
+
+  // the key sits on a very high perch
+  b.cp(82);
+  b.heavy(86, 15);
+  fill(97, 9, 99, 9, "S");
+  b.item("KEY", 98, 8);
+  b.item("OWLET", 99, 8, mo);
+  b.beetle(104, 15);
+  b.cp(108);
+  b.exit(115, GY);
+  return b.L;
+}
+
+// ------------------------------------------------------------------ Chapter 10
+function thunderPeak() {
+  const b = builder(150, "Chapter 10 Â· Thunder Peak", "The last climb. Everything you've learned, and then some.",
+    { sky: ["#1c2230", "#3a4458", "#5a6478"], far: ["#2c3444", "#3a4454"], mid: ["#26323a", "#32404a", "#1a242c"], bg: [40, 48, 62], rain: true, lightning: true, fireflies: true });
+  const { fill, GY } = b;
+  fill(0, GY, 149, 21, "#");
+  b.spawn(3); b.cp(1);
+  b.sign(4, 15, "Thunder Peak. The last climb. You've got this, you two â™¥");
+
+  // two buttons pressed together: one at the bottom of the pool, one on a high perch
+  fill(10, 16, 14, 19, "W");
+  b.button(12, 19, "Z", { sync: "Z" });
+  fill(21, 15, 21, 15, "M");
+  fill(22, 10, 24, 10, "S");
+  b.button(23, 9, "Z", { sync: "Z" });
+  b.gate(29, GY, "Z", { latch: true });
+
+  // the great scale
+  b.cp(31);
+  fill(40, 14, 41, 15, "#");
+  fill(42, 13, 47, 21, "#");
+  fill(48, 13, 53, 18, ".");
+  b.pulley(48, 51, 13, 6 * T);
+  fill(54, 7, 70, 21, "#");
+  b.heavy(48, 4);
+  b.mover({ x0: 48 * T, y0: 5 * T, x1: 44 * T, y1: 5 * T, w: 2 * T, ch: "S", speed: 60 });
+  b.lever(53, 18, "S");
+  b.bone(68, 6);
+
+  // updrafts: one set of fans to the key, the other to the way on
+  b.cp(72);
+  fill(76, 16, 86, 21, ".");
+  fill(76, 21, 86, 21, "^");
+  b.lever(73, 15, "W");
+  fill(79, 17, 79, 21, "#"); fill(79, 16, 79, 16, "F");
+  fill(81, 9, 83, 9, "S");
+  b.item("KEY", 82, 8);
+  fill(85, 17, 85, 21, "#"); fill(85, 16, 85, 16, "G");
+  fill(87, 9, 110, 21, "#");
+  b.lever(89, 8, "W");
+  b.beetle(100, 8);
+  const pip = b.npc("GOAT", 106, 8, "Pip", "Maaa! My kid got blown up onto the key rock by the wind!", "Maaa-aa! Thank you, brave little ones!");
+  b.item("GOAT_KID", 83, 8, pip);
+
+  // everyone on the last scale
+  b.cp(112);
+  fill(114, 12, 117, 12, "S");
+  b.crate(116, 11);
+  b.plate(118, 15, "E", { need: 4, w: 5 });
+  b.gate(126, GY, "E", { latch: true });
+  b.cp(128);
+  b.npc("RIGBY", 136, 15, "Rigby", "ARF! You made it to the very top! Bear told me ALL about you two!", "ARF! You made it to the very top! Bear told me ALL about you two!");
+  b.exit(140, GY);
+  return b.L;
+}
+
+LEVELS.push(lanternCaves, starrySummit, sunkenGrotto, clockworkMill, frozenLake, thunderPeak);
