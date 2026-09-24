@@ -98,14 +98,14 @@ function creekside() {
   b.cp(119);
   b.sign(120, 15, "Three plates. Three friends. The gate stays open once all three are pressed.");
   b.plate(123, 15, "E");
-  fill(128, 12, 131, 15, "#");
+  fill(128, 12, 131, 12, "S");
   b.plate(129, 11, "E");
   b.plate(135, 15, "E");
   b.gate(141, GY, "E", { need: 3, latch: true });
   b.cp(143);
-  fill(148, 11, 148, 15, "S");
+  fill(147, 11, 149, 11, "S");
   b.item("KEY", 148, 10);
-  b.sign(145, 15, "The den is locked. The key is up on that pillar. Carry it to the door together!");
+  b.sign(145, 15, "The den is locked. The key is on that high ledge. Stack up to reach it, then carry it to the door together!");
   b.exit(153, GY);
   return b.L;
 }
@@ -150,13 +150,13 @@ function mossyHollow() {
   b.sign(71, 15, "A heavy crate. Push it together up against the ledge, then climb.");
 
   b.cp(86);
-  fill(104, 12, 112, 15, "#"); fill(106, 15, 111, 15, "."); fill(104, 15, 105, 15, "D");
+  fill(104, 14, 112, 15, "#"); fill(106, 15, 111, 15, "."); fill(104, 15, 105, 15, "D");
   const hazel = b.npc("HEDGEHOG", 100, 15, "Hazel", "My little hoglet wandered into the old burrow and the entrance caved in! Could your dog dig?", "My baby! Oh thank you, thank you!");
   b.item("HOGLET", 110, 15, hazel);
   b.bone(107, 15);
 
   b.cp(114);
-  fill(122, 12, 128, 15, "#"); fill(124, 15, 127, 15, "."); fill(122, 15, 123, 15, "D");
+  fill(122, 14, 128, 15, "#"); fill(124, 15, 127, 15, "."); fill(122, 15, 123, 15, "D");
   b.plate(127, 15, "B");
   b.gate(132, GY, "B");
   b.sign(119, 15, "This gate's plate is sealed inside that mound. Send Bear in!");
@@ -213,8 +213,8 @@ function windyRidge() {
   b.sign(103, 15, "Way too far to jump... unless you're a red panda. Red panda: jump, then R2 in mid-air to DASH!");
 
   b.cp(116);
-  fill(120, 11, 120, 15, "S");
-  b.sign(118, 15, "Something orange is stuck on top of that tall rock. Stack up!");
+  fill(119, 11, 121, 11, "S");
+  b.sign(118, 15, "Something orange is stuck on that high ledge. Stack up!");
   b.mover({ x0: 126 * T, y0: 15 * T + 8, x1: 126 * T, y1: 8 * T, w: 3 * T, speed: 30 });
   fill(129, 8, 141, 15, "#");
   b.sign(124, 15, "This log goes up and down on its own. Time your jump!");
@@ -240,7 +240,7 @@ function stormyFalls() {
   b.sign(4, 15, "Stormy Falls. Everything you've learned, all at once. You've got this, you two ♥");
 
   b.button(14, 15, "S", { sync: "S" });
-  fill(26, 12, 29, 15, "#");
+  fill(26, 12, 29, 12, "S");
   b.button(28, 11, "S", { sync: "S" });
   b.gate(33, GY, "S", { latch: true });
   b.sign(10, 15, "Two buttons, far apart. Press them at the SAME time! Count down together: 3... 2... 1...");
@@ -283,7 +283,7 @@ function stormyFalls() {
   b.item("BABY_TURTLE", 133, 19, shelly);
   b.sign(125, 15, "The button raises the bridge for a moment. Otters can swim down for the hatchling.");
 
-  fill(142, 11, 142, 15, "S");
+  fill(141, 11, 143, 11, "S");
   b.item("KEY", 142, 10);
   fill(145, 0, 145, 12, "S"); fill(145, 13, 145, 15, "B");
   b.button(147, 15, "Z", { sync: "Z" });

@@ -927,6 +927,8 @@ const MENU = [
   { label: "Screen shake", key: "shake" },
   { label: "Hint signs", key: "hints" },
   { label: "Speech bubbles", key: "bubbles" },
+  { label: "Warp red panda to otter", act: () => warpTo(fox, otter) },
+  { label: "Warp otter to red panda", act: () => warpTo(otter, fox) },
   { label: "Back to checkpoint (both)", act: () => { respawn(otter); respawn(fox); setPause(false); } },
   { label: "Restart chapter", act: () => gotoChapter(chapter) },
   { label: "Unlock all chapters", act: () => { try { localStorage.setItem("creekside.unlocked", "6"); } catch {} unlocked = 6; toast("All chapters unlocked! Pick any from Chapter select.", 2.5); setPause(false); } },
@@ -934,6 +936,13 @@ const MENU = [
   { label: "Chapter select", act: () => { location.hash = ""; location.reload(); } },
 ];
 let menuSel = 0, prevState = "play", playTime = 0;
+// stuck? pull one animal over to the other (keeps whatever they're carrying)
+function warpTo(c, target) {
+  burst(c.x + c.w / 2, c.y + c.h / 2, 14, [255, 255, 255]);
+  c.x = target.x; c.y = target.y + target.h - c.h - 2; c.vy = 0; c.ground = null; c.dash = 0;
+  burst(c.x + c.w / 2, c.y + c.h / 2, 14, [255, 255, 255]);
+  sfx("pickup"); setPause(false);
+}
 window.addEventListener("gamepaddisconnected", () => { if (state === "play") { setPause(true); toast("A controller disconnected. Reconnect it and press Options.", 4); } });
 function setPause(on) {
   if (on) { prevState = state; state = "pause"; menuSel = 0; drawMenu(); }
