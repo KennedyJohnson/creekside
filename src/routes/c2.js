@@ -44,7 +44,10 @@ export default ({ follow, cross, bearSit, wait, until, go, hop, use, call, attac
       B.hold.otter.right = B.hold.fox.right = true;
       until(() => B.L.blocks.find((k) => k.need === 2).x >= 82 * T - 1, 10, "heavy crate to the ledge");
       stop("otter", "fox");
-      hop("otter", 82); hop("otter", 85); hop("fox", 85, { dj: true });
+      hop("fox", 83);                       // red panda on the heavy crate: a step for the otter
+      hop("otter", 82); hop("otter", 83);  // otter onto the red panda
+      hop("otter", 85, { up: 2 });
+      hop("fox", 86, { dj: true });
       follow("fox");
       go({ otter: 96, fox: 97 }, 8);
     }],
@@ -76,10 +79,13 @@ export default ({ follow, cross, bearSit, wait, until, go, hop, use, call, attac
     ["heavy plate", () => {
       go({ otter: 161, fox: 162 });
       B.hold.otter.right = B.hold.fox.right = true;
-      until(() => gateOpen("H"), 10, "gate H");
+      until(() => B.L.blocks.find((k) => k.need === 2 && k.x > 160 * T).x >= 170 * T - 1, 10, "heavy on the plate");
       stop("otter", "fox");
+      bearSit("otter", 168);
+      until(() => gateOpen("H"), 4, "gate H");
       go({ otter: 170, fox: 171 }, 8); // over the crate
       go({ otter: 179, fox: 178 }, 8);
+      follow("fox");
     }],
     ["slam + home", () => {
       go({ otter: 181, fox: 178 });

@@ -51,20 +51,24 @@ export default ({ follow, swat, cross, bearSit, wait, until, go, hop, use, call,
       go({ otter: 101, fox: 100 }, 8);
     }],
     ["heavy crate + dig", () => {
-      go({ otter: 102, fox: 102 });
-      B.hold.otter.right = B.hold.fox.right = true;
-      until(() => gateOpen("H"), 12, "gate H");
+      go({ otter: 109, fox: 110 }, 8);                 // over the heavy crate; Bear catches up
+      follow("fox");
+      until(() => Math.abs(B.bear.x - P.fox.x) < 34 && B.bear.onGround && B.bear.x > 106 * T, 8, "Bear close");
+      send("fox", 1);                                  // dig first...
+      until(() => B.L.grid[15][115] === ".", 10, "Bear digs through");
+      go({ otter: 102, fox: 102 }, 8);
+      B.hold.otter.right = B.hold.fox.right = true;     // ...then the heavy crate onto the plate
+      until(() => B.L.blocks.find((k) => k.need === 2).x >= 112 * T, 12, "heavy on the plate");
       stop("otter", "fox");
-      until(() => Math.abs(B.bear.x - P.fox.x) < 34 && B.bear.onGround, 6, "Bear close");
-      send("fox", 1);
-      until(() => B.L.grid[15][115] === ".", 8, "Bear digs through");
+      bearSit("fox", 110);                             // ...and Bear on it too
+      until(() => gateOpen("H"), 4, "gate H");
       go({ otter: 121, fox: 122 }, 8);
       follow("fox");
     }],
     ["timed bridge", () => {
       go({ otter: 125, fox: 124 }, 6);
       attack("otter", 1);
-      go({ otter: 126, fox: 127 });
+      go({ otter: 123, fox: 127 });
       use("otter");
       until(() => B.L.bridges[0].rise > 0.95, 2, "bridge up");
       go({ otter: 137, fox: 138 }, 5);
@@ -84,8 +88,21 @@ export default ({ follow, swat, cross, bearSit, wait, until, go, hop, use, call,
       go({ otter: 158, fox: 158 }, 6);
     }],
     ["storm drain + den", () => {
-      cross("fox", 180, [163, 168, 173, 177]);
-      cross("otter", 180, [163, 168, 173, 177]);
+      const drain = (w) => { // let the belt carry you, hop each spike, then leap the pit
+        const c = P[w];
+        B.hold[w].right = true; B.step(20);
+        until(() => {
+          // in the air, drift just past the spike and no further
+          B.hold[w].right = c.x > 174 * T || c.x < 160 * T || (!c.onGround && [163, 168, 173].some((t) => c.x < t * T + 18 && c.x + c.w > t * T - 8));
+          const g = [163, 168, 173].map((t) => t * T - (c.x + c.w)).find((g) => g >= 0 && g < 4);
+          if (c.onGround && (g !== undefined || (c.x + c.w > 176 * T && c.x < 177 * T))) B.tap[w].jump = true;
+          if (B.enemies.some((e) => e.alive && e.x > c.x && e.x - (c.x + c.w) < 12 && Math.abs(e.y - c.y) < 16)) { c.facing = 1; B.tap[w].attack = true; }
+          return c.x > 179 * T && c.onGround;
+        }, 15, `${w} through the drain`);
+        stop(w);
+      };
+      go({ otter: 159 });
+      drain("fox"); drain("otter");
       go({ otter: 185, fox: 182 }, 6);
       B.tap.otter.jump = true; B.step(1);
       until(() => P.otter.vy > 0, 2, "apex"); B.tap.otter.special = true;

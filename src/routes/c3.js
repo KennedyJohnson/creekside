@@ -54,7 +54,8 @@ export default ({ follow, cross, bearSit, wait, until, go, hop, use, call, attac
       go({ fox: 105, otter: 103 }, 6);
       hop("fox", 113, { dj: true, dash: true });
       go({ fox: 114 }); use("fox");
-      until(() => B.L.bridges[0].rise > 0.95, 3, "bridge");
+      until(() => B.L.bridges[0].rise > 0.9, 2, "bridge");
+      go({ otter: 113 }, 3);
       go({ otter: 116, fox: 117 }, 8);
     }],
     ["carrot ledge", () => {
@@ -87,13 +88,10 @@ export default ({ follow, cross, bearSit, wait, until, go, hop, use, call, attac
         until(() => { B.hold[w].right = c.x + c.w / 2 < colTx * T + 8; return c.y < 10 * T; }, 5, `${w} up the fan`);
         stop(w); go({ [w]: landTx }, 5);
       };
-      ride("fox", 171, 179);             // gray fans up to the ledge
-      use("otter");                       // blue fans on
-      go({ otter: 169 });
-      ride("fox", 187, 190);
-      use("fox");                         // gray again for the otter
-      ride("otter", 171, 179);
-      use("fox");                         // blue again
+      ride("fox", 171, 179); ride("otter", 171, 178); // gray fans up to the middle ledge
+      go({ fox: 181 });
+      hop("fox", 190, { dj: true, dash: true });       // the only lever is across the canyon
+      use("fox");                                      // blue fans on
       ride("otter", 187, 191);
       follow("fox");
       go({ otter: 204, fox: 204 }, 8);

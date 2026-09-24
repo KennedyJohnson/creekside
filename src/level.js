@@ -104,8 +104,10 @@ function creekside() {
   b.plate(135, 15, "E");
   b.gate(141, GY, "E", { need: 3, latch: true });
   b.cp(143);
-  fill(147, 11, 149, 11, "S");
-  b.item("KEY", 148, 10);
+  // the key is higher than even a red panda on an otter can reach
+  fill(147, 10, 149, 10, "S");
+  b.item("KEY", 148, 9);
+  b.crate(143, 15);
   b.sign(145, 15, "The den is locked. Find the key! (If a puzzle goes wrong: Options → Back to checkpoint resets it.)");
   b.exit(153, GY);
   return b.L;
@@ -145,7 +147,7 @@ function mossyHollow() {
 
   b.cp(70);
   b.heavy(74, 15);
-  fill(84, 12, 97, 15, "#");
+  fill(84, 11, 97, 15, "#");
   b.sign(71, 15, "Heavy crates take two to push.");
 
   b.cp(86);
@@ -171,7 +173,7 @@ function mossyHollow() {
   b.beetle(162, 15);
   b.cp(160);
   b.heavy(163, 15);
-  b.plate(170, 15, "H", { need: 2, w: 2 });
+  b.plate(168, 15, "H", { need: 3, w: 4 });
   fill(172, 15, 172, 15, "S");
   b.gate(175, GY, "H");
   b.sign(161, 15, "Red plates need extra weight.");
@@ -221,7 +223,7 @@ function windyRidge() {
   fill(101, GY, 181, 21, "#");
   b.cp(102);
   fill(106, 16, 112, 19, "."); fill(106, 19, 112, 19, "^");
-  b.lever(114, 15, "G");
+  b.button(114, 15, "G", { timer: 2.5 });
   b.bridge(106, 112, 15, "G");
   b.sign(103, 15, "Red panda: jump, then R2 in mid-air to DASH!");
 
@@ -241,10 +243,10 @@ function windyRidge() {
   b.cp(164);
   // updraft canyon: two sets of fans; a lever on each side swaps which set blows
   fill(170, 16, 189, 21, ".");
-  b.lever(166, 15, "W");
+
   fill(171, 17, 171, 21, "#"); fill(171, 16, 171, 16, "F");
   fill(175, 17, 175, 21, "#"); fill(175, 16, 175, 16, "F");
-  fill(178, 12, 180, 12, "S");
+  fill(178, 12, 181, 12, "S");
   fill(183, 17, 183, 21, "#"); fill(183, 16, 183, 16, "G");
   fill(187, 17, 187, 21, "#"); fill(187, 16, 187, 16, "G");
   fill(190, 13, 211, 21, "#");
@@ -294,12 +296,12 @@ function stormyFalls() {
   b.cp(102);
   b.heavy(104, 15);
   fill(114, 0, 115, 12, "S"); fill(114, 13, 115, 15, "D");
-  b.plate(112, 15, "H"); b.plate(113, 15, "H");
-  b.gate(120, GY, "H", { need: 2 });
+  b.plate(110, 15, "H", { need: 3, w: 4 });
+  b.gate(120, GY, "H");
 
   b.cp(122);
   b.beetle(127, 15);
-  b.button(126, 15, "Q", { timer: 4 });
+  b.button(123, 15, "Q", { timer: 3 });
   fill(128, 16, 135, 19, "W");
   b.bridge(128, 135, 15, "Q");
   const shelly = b.npc("TURTLE", 138, 15, "Shelly", "My hatchling sank to the bottom of the pond! I'm much too slow to reach...", "Oh, my little one! Bless you both.");

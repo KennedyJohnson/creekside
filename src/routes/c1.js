@@ -70,10 +70,12 @@ export default ({ follow, bearSit, wait, until, go, hop, use, call, attack, bear
   }],
   ["key + exit", () => {
     follow("fox");
-    go({ otter: 146, fox: 144 }, 10);
-    hop("fox", 146);
+    go({ otter: 142, fox: 141 }, 10);
+    go({ otter: 145 }, 8, { noJump: true });   // crate under the ledge
+    hop("otter", 146);                          // otter on the crate
+    go({ fox: 144 }); hop("fox", 146, { dj: true }); // red panda on the otter
     wait(0.3);
-    hop("fox", 148, { dj: true, up: 3.2 });
+    hop("fox", 148, { dj: true, up: 3.6 });
     until(() => B.L.items.some((i) => i.kind === "key" && i.carrier), 3, "key");
     go({ fox: 150 }); go({ otter: 154, fox: 155 }, 10);
     until(() => B.won, 3, "win");
