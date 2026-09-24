@@ -97,12 +97,12 @@ function destroyTile(tx, ty) {
 L.plates.forEach((p) => (p.s = sprite(ART.PLATE, -5)));
 const BTN_ART = { timer: ART.button("#e24a4a"), sync: ART.button("#4aa3e2") };
 L.levers.forEach((l) => (l.s = sprite(l.kind === "lever" ? ART.LEVER : l.sync ? BTN_ART.sync : BTN_ART.timer, -5)));
-L.gates.forEach((g) => (g.s = sprite(ART.gate(g.h), -12)));
+L.gates.forEach((g) => (g.s = sprite(ART.gate(g.h), -8))); // in front of terrain so cave backdrops never hide it
 L.flaps.forEach((f) => sprite(ART.FLAP, -5).place(f.x + 8, f.y + 8));
 L.bridges.forEach((b) => (b.s = sprite(ART.wood(b.w, b.h, 3), -4)));
 L.movers.forEach((m) => (m.s = sprite(ART.wood(m.w, m.h, 9), -4)));
 L.blocks.forEach((b) => {
-  b.vy = 0; b.pushers = {}; b.lastDx = b.lastDy = 0;
+  b.vy = 0; b.pushers = {}; b.lastDx = b.lastDy = 0; b.hx = b.x; b.hy = b.y;
   b.s = sprite(b.art === "boulder" ? ART.boulder(b.w) : ART.crate(b.w, b.h, b.art === "heavy"), -3);
 });
 L.npcs.forEach((n) => {
@@ -328,7 +328,7 @@ const players = [otter, fox];
 pebbleHolder = otter;
 fox.idle = 0;
 const SPEC = {
-  otter: { speed: 80, jump: 268, air: 0 },
+  otter: { speed: 80, jump: 292, air: 0 }, // ~47px: clears 2-tile steps comfortably, not 3
   fox: { speed: 88, jump: 268, air: 1, air2: 262 },
   bear: { speed: 95, jump: 290 },
 };
@@ -422,7 +422,7 @@ function landedOnTiles(c) {
     const sp = special.get(`${Math.floor((c.x + c.w * fx) / T)},${Math.floor((c.y + c.h + 1) / T)}`);
     if (sp && sp.ch === "C" && !sp.broken && sp.t === 0) sp.t = 0.001;
   }
-  if (c.isChar && tileUnder(c, 0.5) === "M") { // bounce mushroom
+  if (c.isChar && [0.15, 0.5, 0.85].some((fx) => tileUnder(c, fx) === "M")) { // bounce mushroom (either foot)
     c.vy = -430; c.onGround = false; c.air = 0; sfx("bounce");
     burst(c.x + c.w / 2, c.y + c.h, 8, [255, 120, 130], 40);
   }
@@ -732,7 +732,10 @@ function updateWorld(dt, rects) {
     const blocked = bodies.some((b) => b !== g && overlaps(b, g));
     const target = on || g.latched || (g.open > 0.5 && blocked) ? 1 : 0;
     g.open += Math.sign(target - g.open) * Math.min(Math.abs(target - g.open), dt * 3);
-    g.s.place(g.x + 5, g.y + g.h / 2 - g.open * g.h);
+    // retract upward into the pillar by shrinking from the bottom
+    const vis = Math.max(0, 1 - g.open);
+    g.s.go.transform.scale.y = (g.h / 2) * vis;
+    if (vis <= 0.01) g.s.hide(); else g.s.place(g.x + 5, g.y + (g.h * vis) / 2);
   });
   L.bridges.forEach((br) => {
     const target = channel(br.ch) > 0 ? 1 : 0;
@@ -772,10 +775,17 @@ function updateWorld(dt, rects) {
     // tip into gaps: when nothing supports the middle, snap into the gap below
     const filled = (col, row) => solidTile(col, row) || others.some((r) => overlaps({ x: col * T + 4, y: row * T + 4, w: 8, h: 8 }, r));
     const cx = Math.floor((b.x + b.w / 2) / T), below = Math.floor((b.y + b.h + 1) / T);
-    if (!filled(cx, below)) { let c0 = cx; while (!filled(c0 - 1, below) && cx - c0 < 4) c0--; b.x = c0 * T; }
+    // ...but never while riding a platform (a sinking pulley would otherwise shove it off)
+    const onPlatform = L.movers.some((m) => b.x < m.x + m.w && b.x + b.w > m.x && m.y >= b.y + b.h - 3 && m.y <= b.y + b.h + 24);
+    if (!onPlatform && !filled(cx, below)) { let c0 = cx; while (!filled(c0 - 1, below) && cx - c0 < 4) c0--; b.x = c0 * T; }
     if (move(b, b.vy * dt, "y", others)) {
       if (b.vy > 200) { shakeT = 0.2; sfx("thud"); burst(b.x + b.w / 2, b.y + b.h, 14, [140, 120, 90], 70); if (b.need > 1) toast("THUD! Teamwork!", 1.5); }
       b.vy = 0;
+    }
+    if (b.y > LH + 40) { // fell out of the world: put it back where it started
+      b.x = b.hx; b.y = b.hy; b.vy = 0;
+      burst(b.x + b.w / 2, b.y + b.h / 2, 12, [255, 255, 255]);
+      toast("The crate popped back to where it started.", 2);
     }
     b.lastDx = b.x - px; b.lastDy = b.y - py;
     b.pushers = {};

@@ -275,7 +275,7 @@ function stormyFalls() {
   b.sign(102, 15, "Heavy crate, sealed tunnel, locked gate. You'll need all three of you.");
 
   b.cp(122);
-  b.beetle(124, 15);
+  b.beetle(127, 15);
   b.button(126, 15, "Q", { timer: 4 });
   fill(128, 16, 135, 19, "W");
   b.bridge(128, 135, 15, "Q");
