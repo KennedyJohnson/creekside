@@ -521,3 +521,34 @@ export function cloud(seed) {
   g.fillStyle = "rgba(255,255,255,0.85)"; g.fillRect(6, 14, 52, 6);
   return { url: c.toDataURL(), w: 64, h: 24, n: 1 };
 }
+
+// ---------- Chapter 5-6 friends & tiles ----------
+export const BAT = strip([[
+  "k..........k", "kk..kkkk..kk", "kkkkkeekkkkk", ".kkkkkkkkkk.", "...kkkkkk...", "....k..k....",
+], [
+  "............", "....kkkk....", "kkkkkeekkkkk", "kkkkkkkkkkkk", "k..kkkkkk..k", "....k..k....",
+]], { k: "#4a3b5c", e: "#ffd23f" });
+export const BAT_PUP = strip([[".k....k.", ".kkkkkk.", "kkekkekk", ".kkkkkk.", "..k..k.."]], { k: "#6a587e", e: "#ffd23f" });
+export const GOAT = strip([[
+  "............hh..", "...........hh...", "..........wwwh..", "..........wwewn.", "..........wwwww.",
+  "..w......wwwgg..", ".www.wwwwwwww...", ".wwwwwwwwwwww...", "..wwwwwwwwwww...", "..wwwwwwwwwww...",
+  "...wk.....wk....", "...wk.....wk....", "...kk.....kk....",
+]], { w: "#f1ece0", h: "#8a8f99", e: "#111", n: "#c9a0a0", g: "#d9d2c0", k: "#3a3a3a" });
+export const GOAT_KID = strip([[
+  ".......h..", "......www.", "......wewn", "......www.", ".wwwwwww..", "wwwwwwww..", ".wwwwwww..", ".wk...wk..", ".kk...kk..",
+]], { w: "#f7f3ea", h: "#a0a5ad", e: "#111", n: "#d4a5a5", k: "#3a3a3a" });
+function colorWall(fill, edge, icon) {
+  return tileArt((g) => {
+    g.fillStyle = fill; g.fillRect(0, 0, 16, 16);
+    g.fillStyle = edge; g.fillRect(0, 0, 16, 1); g.fillRect(0, 15, 16, 1); g.fillRect(0, 0, 1, 16); g.fillRect(15, 0, 1, 16);
+    g.fillStyle = icon; [[6, 5], [9, 5], [5, 8], [10, 8]].forEach(([x, y]) => g.fillRect(x, y, 2, 2)); g.fillRect(6, 9, 4, 3);
+  });
+}
+export const OTTER_WALL = colorWall("rgba(123,74,43,0.55)", "#d1a476", "#f3dcc0");
+export const PANDA_WALL = colorWall("rgba(193,68,14,0.55)", "#f6ede0", "#ffd9c4");
+export const TOGGLE_A = tileArt((g) => { g.fillStyle = "#c23b5a"; g.fillRect(0, 0, 16, 16); g.fillStyle = "#ff8fa3"; g.fillRect(1, 1, 14, 2); g.fillStyle = "#7a1f35"; g.fillRect(0, 14, 16, 2); g.fillStyle = "#ffd0da"; g.fillRect(6, 6, 4, 4); });
+export const TOGGLE_B = tileArt((g) => { g.fillStyle = "#2f7fc2"; g.fillRect(0, 0, 16, 16); g.fillStyle = "#8fd0ff"; g.fillRect(1, 1, 14, 2); g.fillStyle = "#1a4a7a"; g.fillRect(0, 14, 16, 2); g.fillStyle = "#d0ecff"; g.fillRect(5, 7, 6, 2); g.fillRect(7, 5, 2, 6); });
+export const FLAG = strip([
+  ["k.......", "k.......", "k.......", "k.......", "k.......", "k.......", "krr.....", "krrrr...", "krrrrrr.", "krrrr...", "krr.....", "kk......"],
+  ["krrr....", "krggggg.", "krgwwgg.", "krggggg.", "krrr....", "k.......", "k.......", "k.......", "k.......", "k.......", "k.......", "kk......"],
+], { k: "#4b3322", r: "#8a5a33", g: "#5fd35f", w: "#ffffff" });

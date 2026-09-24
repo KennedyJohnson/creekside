@@ -57,7 +57,7 @@ sprite({ url: baked.terrain, w: baked.w, h: baked.h, n: 1 }, -10).place(LW / 2, 
 sprite({ url: baked.water, w: baked.w, h: baked.h, n: 1 }, 5).place(LW / 2, LH / 2);
 
 // Mechanic tiles are individual sprites so they can break / crumble / be dug.
-const TILE_ART = { D: ART.DIRT, C: ART.CRUMBLE, M: ART.MUSHROOM, B: ART.BRAMBLE, X: ART.CRACKED };
+const TILE_ART = { D: ART.DIRT, C: ART.CRUMBLE, M: ART.MUSHROOM, B: ART.BRAMBLE, X: ART.CRACKED, O: ART.OTTER_WALL, P: ART.PANDA_WALL, r: ART.TOGGLE_A, u: ART.TOGGLE_B };
 const special = new Map();
 for (let ty = 0; ty < L.H; ty++)
   for (let tx = 0; tx < L.W; tx++) {
@@ -65,13 +65,18 @@ for (let ty = 0; ty < L.H; ty++)
     if (!TILE_ART[ch]) continue;
     const s = sprite(TILE_ART[ch], -9);
     s.place(tx * T + 8, ty * T + 8);
-    special.set(`${tx},${ty}`, { ch, tx, ty, s, t: 0, broken: false, back: 0 });
+    special.set(`${tx},${ty}`, { ch, tx, ty, s, t: 0, broken: false, back: 0, solid: ch !== "u" });
+    if (ch === "u") s.tex.setColor(new Color(255, 255, 255, 60));
   }
 
-const tileAt = (tx, ty) => (ty < 0 || ty >= L.H ? "." : tx < 0 || tx >= L.W ? "#" : L.grid[ty][tx]);
-const solidTile = (tx, ty) => {
+const tileAt = (tx, ty) => (tx < 0 || tx >= L.W ? "#" : ty < 0 || ty >= L.H ? "." : L.grid[ty][tx]);
+// b (optional) = the body asking: colour walls only block the other animal
+const solidTile = (tx, ty, b) => {
   const c = tileAt(tx, ty);
   if (c === "C") return !special.get(`${tx},${ty}`).broken;
+  if (c === "r" || c === "u") return special.get(`${tx},${ty}`).solid;
+  if (c === "O") return !b || b.kind !== "otter";
+  if (c === "P") return !b || b.kind !== "fox";
   return c === "#" || c === "S" || c === "D" || c === "M" || c === "B" || c === "X";
 };
 const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -114,6 +119,7 @@ L.items.forEach((it) => {
   it.carrier = null; it.done = false;
 });
 const enemies = L.enemies.map((e) => ({ x: e.tx * T + 2, y: (e.ty + 1) * T - 7, w: 12, h: 7, vy: 0, dir: -1, alive: true, anim: 0, s: sprite(ART.BEETLE, 1) }));
+const flags = L.checkpoints.slice(1).map((c) => { const f = sprite(ART.FLAG, -6); f.place(c.tx * T + 4, groundY(c.tx) - 6); return f; });
 const denS = sprite(ART.den(), -6);
 denS.place(L.exit.x + L.exit.w / 2, L.exit.y + L.exit.h - 20);
 
@@ -125,7 +131,7 @@ const MENU_KEYS = {
   mOk: ["Enter", " ", "Space", "south"], mBack: ["east"],
 };
 const KEYS = {
-  otter: {
+  otter: { // keyboard layout "A" (WASD) + controller 1
     left: ["a", "KeyA", "dpadLeft"], right: ["d", "KeyD", "dpadRight"], up: ["w", "KeyW", "dpadUp"], down: ["s", "KeyS", "dpadDown"],
     jump: [" ", "Space", "south"], use: ["f", "KeyF", "west"], attack: ["c", "KeyC", "east"], special: ["g", "KeyG", "r2", "l2"],
     call: ["e", "KeyE", "north"], love: ["q", "KeyQ", "r1", "l1"], reset: ["r", "KeyR", "share"], start: ["Enter", "south", "options"], pause: ["options"],
@@ -141,17 +147,30 @@ const KEYS = {
 const PAD_NAMES = new Set(["dpadLeft", "dpadRight", "dpadUp", "dpadDown", "south", "west", "east", "north", "r1", "l1", "r2", "l2", "share", "options"]);
 // Controllers are assigned in connection order, so a pad that Chrome reports as
 // index 1/2/3 (e.g. after a reconnect) still becomes player 1 or 2.
+// swapPlayers (chosen on the "who's who" screen) trades controllers AND keyboard layouts.
 const padFor = { otter: 0, fox: 1 };
-let padKey = null;
-function bindPads() {
+let padKey = null, swapPlayers = false;
+try { swapPlayers = localStorage.getItem("creekside.swap") === "1"; } catch {}
+function bindPads(force) {
   const pads = [...(navigator.getGamepads?.() || [])].filter(Boolean).map((g) => g.index).sort((a, b) => a - b);
-  const key = pads.join(",");
-  if (key === padKey) return;
+  const key = pads.join(",") + (swapPlayers ? "s" : "");
+  if (key === padKey && !force) return;
   padKey = key;
-  padFor.otter = pads[0] ?? 0; padFor.fox = pads[1] ?? (pads[0] === 1 ? 0 : 1);
-  for (const who of ["otter", "fox"])
-    for (const [act, list] of Object.entries(KEYS[who]))
-      input.mapAction(`${who}.${act}`, list.map((t) => (PAD_NAMES.has(t) ? `pad:${padFor[who]}:${t}` : t)));
+  const p1 = pads[0] ?? 0, p2 = pads[1] ?? (pads[0] === 1 ? 0 : 1);
+  padFor.otter = swapPlayers ? p2 : p1; padFor.fox = swapPlayers ? p1 : p2;
+  for (const who of ["otter", "fox"]) {
+    const layout = KEYS[swapPlayers ? (who === "otter" ? "fox" : "otter") : who];
+    for (const [act, list] of Object.entries(layout)) {
+      const pads = list.filter((t) => PAD_NAMES.has(t)).map((t) => `pad:${padFor[who]}:${t}`);
+      const keys = list.filter((t) => !PAD_NAMES.has(t));
+      input.mapAction(`${who}.${act}`, [...keys, ...pads]);
+    }
+  }
+}
+function setSwap(v) {
+  swapPlayers = v;
+  try { localStorage.setItem("creekside.swap", v ? "1" : "0"); } catch {}
+  bindPads(true);
 }
 bindPads();
 window.addEventListener("gamepadconnected", bindPads);
@@ -223,6 +242,7 @@ if (TH.leaves) pool(ART.LEAF, 18, 6, "leaf");
 if (TH.butterflies) pool(ART.BUTTERFLY, 6, 2, "butterfly");
 if (TH.fireflies) pool(ART.PIXEL, 26, 6, "firefly");
 if (TH.birds) pool(ART.BIRD, 4, -45, "bird");
+if (TH.stars) pool(ART.PIXEL, 40, -58, "star");
 pool(ART.PIXEL, 14, 6, "sparkle");
 const clouds = TH.rain ? [] : [0, 1, 2, 3, 4].map((i) => ({ s: sprite(ART.cloud(i + 3), -55), x: Math.random() * LW, y: 20 + Math.random() * 90, v: 3 + Math.random() * 5 }));
 const waterTops = [];
@@ -246,6 +266,9 @@ function spawnAmbient(a) {
     const dir = Math.random() < 0.5 ? 1 : -1;
     Object.assign(a, { x: dir > 0 ? left - 20 : left + viewW + 20, y: top + 15 + Math.random() * 50, vx: dir * (35 + Math.random() * 20), vy: 0, life: 14 });
     a.s.flip(dir < 0);
+  } else if (a.kind === "star") {
+    Object.assign(a, { ox: Math.random() * viewW, oy: Math.random() * viewH * 0.55, life: 1e9 });
+    tint(a.s, [255, 250, 220]);
   } else if (a.kind === "sparkle") {
     const vis = waterTops.filter(([tx]) => tx * T > left && tx * T < left + viewW);
     if (!vis.length) { a.life = 0.5; a.x = -1e5; return; }
@@ -269,7 +292,10 @@ function updateAmbient(dt) {
       const glow = 0.5 + 0.5 * Math.sin(a.t * 3 + a.ph);
       a.s.tex.setColor(new Color(255, 240, 140, Math.round(60 + 195 * glow)));
     } else if (a.kind === "bird") { a.x += a.vx * dt; a.y += Math.sin(a.t * 2) * 4 * dt; a.s.frame(Math.floor(a.t * 5) % 2); }
-    else if (a.kind === "sparkle") a.s.tex.setColor(new Color(255, 255, 255, Math.round(255 * Math.min(1, a.life * 3))));
+    else if (a.kind === "star") {
+      a.x = camX - viewW / 2 + a.ox; a.y = camY - viewH / 2 + a.oy;
+      a.s.tex.setColor(new Color(255, 250, 220, Math.round(140 + 115 * Math.sin(a.t * 1.5 + a.ph))));
+    } else if (a.kind === "sparkle") a.s.tex.setColor(new Color(255, 255, 255, Math.round(255 * Math.min(1, a.life * 3))));
     a.s.place(a.x, a.y);
   });
   clouds.forEach((c) => {
@@ -293,10 +319,14 @@ function makeChar(kind, art, w, h, pad, z) {
 }
 const otter = makeChar("otter", ART.OTTER, 14, 11, 0, 3);
 otter.pebble = sprite(ART.PEBBLE, 4); otter.idle = 0; // otters keep a favourite pebble and juggle it
+let pebbleHolder = null; // set after both animals exist
+let pawsT = 0;
 const fox = makeChar("fox", ART.FOX, 12, 13, 1, 2);
 const bear = makeChar("bear", ART.BEAR, 14, 12, -1, 1);
 Object.assign(bear, { mode: "follow", target: otter, stuck: 0, dig: 0, sendJumps: 0, blockT: 0, petT: 0 });
 const players = [otter, fox];
+pebbleHolder = otter;
+fox.idle = 0;
 const SPEC = {
   otter: { speed: 80, jump: 268, air: 0 },
   fox: { speed: 88, jump: 268, air: 1, air2: 262 },
@@ -337,7 +367,7 @@ function move(b, d, axis, rects) {
   const y0 = Math.floor(b.y / T), y1 = Math.floor((b.y + b.h - 0.001) / T);
   for (let ty = y0; ty <= y1; ty++)
     for (let tx = x0; tx <= x1; tx++) {
-      if (!solidTile(tx, ty)) continue;
+      if (!solidTile(tx, ty, b)) continue;
       if (axis === "x") b.x = d > 0 ? Math.min(b.x, tx * T - b.w) : Math.max(b.x, (tx + 1) * T);
       else b.y = d > 0 ? Math.min(b.y, ty * T - b.h) : Math.max(b.y, (ty + 1) * T);
       hit = "tile";
@@ -382,6 +412,7 @@ function physicsStep(c, dt, wantX, rects) {
       if (hy === "tile") landedOnTiles(c);
     }
   } else c.ground = null;
+  c.x = Math.min(Math.max(c.x, 0), LW - c.w); // never leave the level sideways
   c.lastDx = c.x - px;
   return hx;
 }
@@ -488,7 +519,14 @@ function updatePlayer(c, dt, rects) {
   }
   if (pressed(c.kind, "call")) callBear(c);
   if (pressed(c.kind, "love")) {
-    if (Math.abs(bear.x - c.x) < 28 && Math.abs(bear.y - c.y) < 20) petBear(c);
+    const partnerClose = Math.abs(c.x - other.x) < 26 && Math.abs(c.y - other.y) < 16 && other.dead <= 0;
+    if (Math.abs(bear.x - c.x) < 28 && Math.abs(bear.y - c.y) < 20 && !partnerClose) petBear(c);
+    else if (partnerClose) cuddle(c, other);
+    else if (c.onGround && !c.roll) { // roll over!
+      c.roll = 0.7; c.vy = -120; sfx("pet");
+      heart(c.x + c.w / 2, c.y - 6);
+      if (c.kind === "fox") bubble(pick(["*happy red panda roll*", "*flops over adorably*", "*tumbles* ♥"]));
+    }
     else {
       heart(c.x + c.w / 2, c.y - 4); sfx("heart");
       if (Math.abs(c.x - other.x) < 20 && Math.abs(c.y - other.y) < 16) { heart(other.x + other.w / 2, other.y - 8); heart((c.x + other.x) / 2, c.y - 14); }
@@ -503,15 +541,20 @@ function updatePlayer(c, dt, rects) {
   c.s.flip(c.facing < 0);
   const blink = c.dead > 0 && Math.floor(c.dead * 12) % 2;
   if (blink) c.s.hide(); else c.s.place(c.x + c.w / 2, c.y + c.h - c.art.h / 2 + (c.inWater ? 2 : 0));
-  if (c.pebble) {
-    const still = c.onGround && !c.inWater && Math.abs(wantX) < 5 && c.dead <= 0;
-    c.idle = still ? c.idle + dt : 0;
+  // roll-over spin
+  if (c.roll > 0) { c.roll -= dt; c.s.go.transform.rotation = -c.facing * (1 - Math.max(0, c.roll) / 0.7) * Math.PI * 2; }
+  else if (c.roll !== undefined) { c.s.go.transform.rotation = 0; c.roll = 0; }
+  // whoever holds the pebble juggles it when idle (and carries it on their back otherwise)
+  const still = c.onGround && !c.inWater && Math.abs(wantX) < 5 && c.dead <= 0;
+  c.idle = still ? c.idle + dt : 0;
+  if (pebbleHolder === c) {
     if (c.idle > 2.5) {
       const ph = (c.idle * 2.2) % 1, h = Math.sin(ph * Math.PI) * 10;
       if (ph < c.lastPh) sfx("tick");
       c.lastPh = ph;
-      c.pebble.place(c.x + c.w / 2 + c.facing * 4, c.y - 2 - h);
-    } else c.pebble.hide();
+      otter.pebble.place(c.x + c.w / 2 + c.facing * 4, c.y - 2 - h);
+    } else if (c.kind === "fox") otter.pebble.place(c.x + c.w / 2 - c.facing * 2, c.y - 1);
+    else otter.pebble.hide();
   }
   if (c.atk > 0) { c.swipe.flip(c.facing < 0); c.swipe.place(c.x + c.w / 2 + c.facing * 12, c.y + c.h / 2 - 1); }
   else c.swipe.hide();
@@ -523,6 +566,17 @@ function useLever(lv) {
   else if (lv.sync && !lv.on) lv.arm = 0.6;
   burst(lv.x + 8, lv.y + 8, 8, [255, 230, 120], 40);
   sfx("lever");
+}
+
+// ---------- Otter & red panda cuddles ----------
+function cuddle(c, other) {
+  c.facing = Math.sign(other.x - c.x) || 1; other.facing = -c.facing;
+  c.vy = -90; other.vy = -90; sfx("pet");
+  for (let i = 0; i < 4; i++) heart((c.x + other.x) / 2 + 7 + (Math.random() - 0.5) * 16, c.y - 6 - i * 3);
+  if (pebbleHolder === c) { // gift the favourite pebble
+    pebbleHolder = other;
+    toast(c.kind === "otter" ? "The otter gave the red panda their favorite pebble! 🥹" : "The red panda gave the pebble back to the otter ♥", 2.5);
+  } else toast(pick(["*nuzzle nuzzle* ♥", "*boop!*", "*cozy cuddle*", "*nose kiss* ♥"]), 1.5);
 }
 
 // ---------- Bear ----------
@@ -631,6 +685,15 @@ function updateEnemies(dt, rects) {
 }
 
 // ---------- World objects ----------
+// weight standing on a platform: animals count 1, crates by size (riders=true: animals only)
+function weightOn(m, ridersOnly) {
+  let w = [otter, fox, bear].filter((c) => c.ground === m && c.dead <= 0).length;
+  if (!ridersOnly) {
+    const strip = { x: m.x, y: m.y - 3, w: m.w, h: 4 };
+    L.blocks.forEach((b) => { if (overlaps(b, strip)) w += b.need; });
+  }
+  return w;
+}
 let friends = 0, bones = 0, syncFailT = 0;
 function updateWorld(dt, rects) {
   const bodies = [otter, fox, bear, ...L.blocks];
@@ -680,7 +743,15 @@ function updateWorld(dt, rects) {
   L.movers.forEach((m) => {
     const px = m.x, py = m.y;
     let tx, ty;
-    if (m.ch) { const on = channel(m.ch) > 0; tx = on ? m.x1 : m.x0; ty = on ? m.y1 : m.y0; }
+    if (m.pulley !== undefined) {
+      const pair = L.movers.filter((o) => o.pulley === m.pulley);
+      const wA = weightOn(pair[0]), wB = weightOn(pair[1]);
+      tx = m.x0; ty = m.y0 + m.side * Math.sign(wA - wB) * m.range;
+    } else if (m.riders) {
+      const n = weightOn(m, true), up = n >= m.riders;
+      tx = m.x0; ty = up ? m.y1 : m.y0;
+      if (n > 0 && !up && m.y === m.y0 && toastT <= 0) toast(`Lift: ${n}/${m.riders} aboard`, 1);
+    } else if (m.ch) { const on = channel(m.ch) > 0; tx = on ? m.x1 : m.x0; ty = on ? m.y1 : m.y0; }
     else {
       tx = m.dir > 0 ? m.x1 : m.x0; ty = m.dir > 0 ? m.y1 : m.y0;
       if (m.x === tx && m.y === ty && (m.pause += dt) > 0.7) { m.pause = 0; m.dir *= -1; }
@@ -710,7 +781,19 @@ function updateWorld(dt, rects) {
     b.pushers = {};
     b.s.place(b.x + b.w / 2, b.y + b.h / 2);
   });
+  const kOn = channel("K") % 2 === 1;
   special.forEach((sp) => {
+    if (sp.ch === "r" || sp.ch === "u") {
+      const want = sp.ch === "r" ? !kOn : kOn;
+      if (want !== sp.solid) {
+        const r = { x: sp.tx * T, y: sp.ty * T, w: T, h: T };
+        if (!want || ![otter, fox, bear, ...L.blocks].some((c) => overlaps(c, r))) {
+          sp.solid = want;
+          sp.s.tex.setColor(new Color(255, 255, 255, want ? 255 : 60));
+        }
+      }
+      return;
+    }
     if (sp.ch !== "C") return;
     if (sp.t > 0 && !sp.broken) {
       sp.t += dt;
@@ -793,8 +876,26 @@ const toScreen = (x, y) => [window.innerWidth / 2 + (x - camX) * Z, window.inner
 // ---------- Game flow ----------
 let state = hp.has("go") ? "play" : "splash", winT = 0, sel = chapter;
 const titleEl = $("title"), winEl = $("win"), chapEl = $("chapters");
-const CH_NAMES = ["Creekside", "Mossy Hollow", "Windy Ridge", "Stormy Falls"];
-const splashEl = $("splash"), pauseEl = $("pause");
+const CH_NAMES = ["Creekside", "Mossy Hollow", "Windy Ridge", "Stormy Falls", "Lantern Caves", "Starry Summit"];
+const splashEl = $("splash"), pauseEl = $("pause"), whoEl = $("who");
+function drawWho() {
+  const p1 = swapPlayers ? "fox" : "otter", p2 = swapPlayers ? "otter" : "fox";
+  const label = (who) => (who === "otter" ? "Otter" : "Red panda");
+  const pads = [...(navigator.getGamepads?.() || [])].filter(Boolean).length;
+  $("whoP1").textContent = label(p1); $("whoP2").textContent = label(p2);
+  $("whoC1").textContent = pads >= 1 ? "🎮 Controller 1" : "⌨ WASD + Space";
+  $("whoC2").textContent = pads >= 2 ? "🎮 Controller 2" : "⌨ Arrow keys";
+  $("whoImg1").replaceChildren(spriteCanvas(p1 === "otter" ? "OTTER" : "FOX"));
+  $("whoImg2").replaceChildren(spriteCanvas(p2 === "otter" ? "OTTER" : "FOX", true));
+}
+function spriteCanvas(k, flip) {
+  const a = ART[k], c = document.createElement("canvas");
+  c.width = a.w; c.height = a.h; c.className = "pal"; c.style.width = a.w * 7 + "px";
+  const img = new Image();
+  img.onload = () => { const g = c.getContext("2d"); if (flip) { g.translate(a.w, 0); g.scale(-1, 1); } g.drawImage(img, 0, 0, a.w, a.h, 0, 0, a.w, a.h); };
+  img.src = a.url;
+  return c;
+}
 if (state === "play") { titleEl.classList.add("hidden"); splashEl.classList.add("hidden"); toast(L.sub, 4); }
 else titleEl.classList.add("hidden");
 // splash art: the gang, drawn from the same pixel sprites
@@ -818,9 +919,12 @@ const MENU = [
   { label: "Speech bubbles", key: "bubbles" },
   { label: "Back to checkpoint (both)", act: () => { respawn(otter); respawn(fox); setPause(false); } },
   { label: "Restart chapter", act: () => gotoChapter(chapter) },
+  { label: "Unlock all chapters", act: () => { try { localStorage.setItem("creekside.unlocked", "6"); } catch {} unlocked = 6; toast("All chapters unlocked! Pick any from Chapter select.", 2.5); setPause(false); } },
+  { label: "Swap who plays who", act: () => { setSwap(!swapPlayers); toast(`Player 1 is now the ${swapPlayers ? "red panda" : "otter"}!`, 2); setPause(false); } },
   { label: "Chapter select", act: () => { location.hash = ""; location.reload(); } },
 ];
-let menuSel = 0, prevState = "play";
+let menuSel = 0, prevState = "play", playTime = 0;
+window.addEventListener("gamepaddisconnected", () => { if (state === "play") { setPause(true); toast("A controller disconnected. Reconnect it and press Options.", 4); } });
 function setPause(on) {
   if (on) { prevState = state; state = "pause"; menuSel = 0; drawMenu(); }
   else state = prevState;
@@ -870,23 +974,25 @@ function frame(dt) {
   if (state === "splash") {
     updatePads();
     if (anyStart || pressed("otter", "jump") || pressed("fox", "jump")) {
-      state = "title"; splashEl.classList.add("hidden"); titleEl.classList.remove("hidden"); sfx("pet");
+      state = "who"; splashEl.classList.add("hidden"); whoEl.classList.remove("hidden"); drawWho(); sfx("pet");
     }
+  } else if (state === "who") {
+    updatePads();
+    if (["otter", "fox"].some((w) => pressed(w, "mLeft") || pressed(w, "mRight"))) { setSwap(!swapPlayers); drawWho(); sfx("select"); }
+    if (anyStart) { state = "title"; whoEl.classList.add("hidden"); titleEl.classList.remove("hidden"); sfx("pet"); }
   } else if (state === "pause") {
-    for (const w of ["otter", "fox"]) {
-      if (pressed(w, "mUp")) { menuSel = (menuSel + MENU.length - 1) % MENU.length; drawMenu(); sfx("select"); }
-      if (pressed(w, "mDown")) { menuSel = (menuSel + 1) % MENU.length; drawMenu(); sfx("select"); }
-      if (pressed(w, "mLeft")) menuInput(menuSel, -1);
-      if (pressed(w, "mRight")) menuInput(menuSel, 1);
-      if (pressed(w, "mOk")) menuInput(menuSel, 0);
-      if (pressed(w, "mBack") || pressed(w, "pause")) setPause(false);
-    }
+    const any = (act) => ["otter", "fox"].some((w) => pressed(w, act));
+    if (any("mUp")) { menuSel = (menuSel + MENU.length - 1) % MENU.length; drawMenu(); sfx("select"); }
+    if (any("mDown")) { menuSel = (menuSel + 1) % MENU.length; drawMenu(); sfx("select"); }
+    if (any("mLeft")) menuInput(menuSel, -1);
+    if (any("mRight")) menuInput(menuSel, 1);
+    if (any("mOk")) menuInput(menuSel, 0);
+    else if (any("mBack") || any("pause")) setPause(false);
   } else if (state === "title") {
     updatePads();
-    for (const w of ["otter", "fox"]) {
-      if (pressed(w, "left")) sel = Math.max(0, sel - 1);
-      if (pressed(w, "right")) sel = Math.min(unlocked - 1, sel + 1);
-    }
+    const any = (act) => ["otter", "fox"].some((w) => pressed(w, act));
+    if (any("mLeft")) { sel = Math.max(0, sel - 1); sfx("select"); }
+    if (any("mRight")) { sel = Math.min(unlocked - 1, sel + 1); sfx("select"); }
     drawChapters();
     if (anyStart) {
       if (sel !== chapter) return gotoChapter(sel);
@@ -904,8 +1010,15 @@ function frame(dt) {
       updateWorld(h, rects);
     }
     edgeOff = false;
+    const together = otter.idle > 1 && fox.idle > 1 && Math.abs(otter.x - fox.x) < 22 && Math.abs(otter.y - fox.y) < 10;
+    pawsT = together ? pawsT + dt : 0;
+    if (pawsT > 2) { pawsT = 0.6; heart((otter.x + fox.x) / 2 + 7, otter.y - 8); if (Math.random() < 0.3) toast("*holding paws* ♥", 1.2); }
     const nxt = L.checkpoints[cpIdx + 1];
-    if (nxt && otter.x > nxt.tx * T && fox.x > nxt.tx * T) cpIdx++;
+    if (nxt && otter.x > nxt.tx * T && fox.x > nxt.tx * T) {
+      cpIdx++; flags[cpIdx - 1]?.frame(1); sfx("pickup");
+      if (toastT <= 0) toast("Checkpoint! ⛳", 1.2);
+    }
+    if (state === "play") playTime += dt;
     const keysOk = L.items.every((it) => it.kind !== "key" || it.carrier);
     if (state === "play" && overlaps(otter, L.exit) && overlaps(fox, L.exit)) {
       if (!keysOk) { if (toastT <= 0) toast("The den is locked. Bring the key!", 1.5); }
@@ -915,7 +1028,8 @@ function frame(dt) {
         const last = chapter === LEVELS.length - 1;
         $("winTitle").textContent = last ? "The End ♥" : `${CH_NAMES[chapter]} complete!`;
         sfx("win");
-        $("winSub").textContent = `Friends helped: ${friends}/${totalFriends} · Bones for Bear: ${bones}/${totalBones}` + (last ? " · Bear is SO proud of you two." : "");
+        const mm = Math.floor(playTime / 60), ss = String(Math.floor(playTime % 60)).padStart(2, "0");
+        $("winSub").textContent = `Time ${mm}:${ss} · Friends helped: ${friends}/${totalFriends} · Bones for Bear: ${bones}/${totalBones}` + (last ? " · You did it together. Bear, Rigby and all your new friends are SO proud of you two ♥" : "");
         $("winNext").textContent = last ? "Press ✕ to play again from the start" : "Press ✕ for the next chapter";
       }
     }
@@ -931,7 +1045,7 @@ function frame(dt) {
     const text = !settings.hints ? "" : npc ? `${npc.name}: "${npc.helped ? npc.thanks : npc.say}"` : sign ? sign.text : "";
     hintEl.textContent = text;
     hintEl.classList.toggle("show", !!text);
-    hudEl.textContent = `${L.name}   ·   Friends ${friends}/${totalFriends}   ·   🦴 ${bones}/${totalBones}` + (L.items.some((i) => i.kind === "key" && i.carrier) ? "   ·   🔑" : "");
+    hudEl.textContent = `⏸ Options/Esc   ·   ${L.name}   ·   Friends ${friends}/${totalFriends}   ·   🦴 ${bones}/${totalBones}` + (L.items.some((i) => i.kind === "key" && i.carrier) ? "   ·   🔑" : "");
   }
 
   parts.forEach((p) => {

@@ -105,6 +105,8 @@ const SONGS = [
   { bpm: 88, root: 57, chords: [[0, 3, 7], [5, 8, 12], [3, 7, 10], [7, 10, 14]], scale: [0, 3, 5, 7, 10], lead: "triangle" }, // mossy
   { bpm: 104, root: 62, chords: [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]], scale: [0, 2, 4, 7, 9], lead: "square" },  // windy
   { bpm: 84, root: 55, chords: [[0, 3, 7], [8, 12, 15], [5, 8, 12], [7, 11, 14]], scale: [0, 3, 5, 7, 10], lead: "triangle" }, // storm
+  { bpm: 76, root: 57, chords: [[0, 3, 7], [3, 7, 10], [8, 12, 15], [7, 10, 14]], scale: [0, 2, 3, 7, 8], lead: "sine" },      // caves
+  { bpm: 92, root: 64, chords: [[0, 4, 7], [5, 9, 12], [9, 12, 16], [7, 11, 14]], scale: [0, 2, 4, 7, 9, 11], lead: "triangle" }, // summit
 ];
 let pendingMusic = null, timer = null;
 export function playMusic(i) {

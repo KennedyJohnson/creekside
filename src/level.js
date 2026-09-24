@@ -1,7 +1,8 @@
 // Chapters are built in code so the puzzle geometry is easy to tweak.
 // Tiles: '#' dirt/grass, 'S' stone, 'W' water, '^' thorns, '.' air,
 //        'D' soft dirt (Bear digs), 'C' crumbly rock, 'M' bounce mushroom,
-//        'B' brambles (attack to cut), 'X' cracked rock (otter slam). y grows downward.
+//        'B' brambles (attack to cut), 'X' cracked rock (otter slam),
+//        'O' otter-only wall, 'P' red-panda-only wall, 'r'/'u' switch blocks (lever channel K). y grows downward.
 export const T = 16;
 
 function builder(W, name, sub, theme) {
@@ -21,8 +22,15 @@ function builder(W, name, sub, theme) {
     button: (tx, ty, ch, o = {}) => L.levers.push({ kind: "button", x: tx * T, y: ty * T, w: T, h: T, ch, on: false, t: 0, arm: 0, ...o }),
     sign: (tx, ty, text) => L.signs.push({ x: tx * T + 8, y: (ty + 1) * T, text }),
     gate(tx, floor, ch, o = {}) {
-      if (o.pillar !== false) b.fill(tx, 0, tx, floor - 4, "S");
-      L.gates.push({ x: tx * T + 3, y: (floor - 3) * T, w: 10, h: 3 * T, ch, need: o.need || 1, latch: !!o.latch, open: 0, latched: false });
+      const rows = o.rows || 3;
+      if (o.pillar !== false) b.fill(tx, 0, tx, floor - rows - 1, "S");
+      L.gates.push({ x: tx * T + 3, y: (floor - rows) * T, w: 10, h: rows * T, ch, need: o.need || 1, latch: !!o.latch, open: 0, latched: false });
+    },
+    // pulley pair: the heavier platform sinks, the other rises
+    pulley(txA, txB, row, range) {
+      const id = L.movers.length;
+      for (const [tx, side] of [[txA, 1], [txB, -1]])
+        b.mover({ x0: tx * T, y0: row * T, x1: tx * T, y1: row * T, w: 3 * T, h: 8, pulley: id, side, range, speed: 45 });
     },
     flap: (tx, ty) => L.flaps.push({ x: tx * T, y: ty * T, w: T, h: T, flap: true }),
     cp: (tx) => L.checkpoints.push({ tx }),
@@ -296,3 +304,127 @@ function stormyFalls() {
 }
 
 export const LEVELS = [creekside, mossyHollow, windyRidge, stormyFalls];
+
+// ------------------------------------------------------------------ Chapter 5
+function lanternCaves() {
+  const b = builder(170, "Chapter 5 · Lantern Caves", "Color walls, weighted pulleys and switch blocks. Think before you leap!",
+    { sky: ["#1b1426", "#2e2140", "#3d2b4d"], far: ["#2a2036", "#352842"], mid: ["#3a2c46", "#46354f", "#2a2036"], bg: [30, 22, 40], fireflies: true, dark: true });
+  const { fill, GY } = b;
+  fill(0, GY, 169, 21, "#");
+  fill(0, 0, 169, 2, "S");
+  b.spawn(3); b.cp(1);
+  b.sign(2, 15, "Lantern Caves! Glowing walls only let ONE of you through: brown = otter, red = red panda.");
+
+  // color walls: each of you holds a plate for the other
+  fill(12, 14, 13, 15, "#");
+  fill(14, 3, 14, 13, "P");
+  b.gate(14, GY, "A", { pillar: false, rows: 2 });
+  b.plate(18, 15, "A");
+  fill(22, 14, 23, 15, "#");
+  fill(24, 3, 24, 13, "O");
+  b.gate(24, GY, "B", { pillar: false, rows: 2 });
+  b.plate(28, 15, "B");
+  b.sign(8, 15, "Red panda: hop on the step and walk through the red wall. Then hold the plate for the otter!");
+
+  // pulley: the heavier side sinks
+  b.cp(29);
+  b.crate(33, 15);
+  fill(36, 16, 41, 21, ".");
+  b.pulley(36, 39, 16, 6 * T);
+  fill(42, 10, 60, 21, "#");
+  b.sign(31, 15, "A pulley! The heavier platform sinks and the other one rises. Crates and Bear count as weight too.");
+  b.bone(57, 9);
+
+  // switch blocks: flip the lever to swap which blocks are solid
+  b.cp(44);
+  b.lever(59, 9, "K");
+  fill(61, 16, 80, 21, ".");
+  fill(61, 10, 66, 10, "r"); fill(67, 10, 67, 10, "S"); fill(68, 10, 72, 10, "u"); fill(73, 10, 73, 10, "S"); fill(74, 10, 80, 10, "r");
+  fill(81, 10, 95, 21, "#");
+  b.lever(82, 9, "K");
+  b.sign(56, 9, "Switch blocks! The lever swaps pink and blue. Wait on the stone steps and call out when to flip it.");
+
+  // two-seat lift
+  b.cp(83);
+  b.mover({ x0: 103 * T, y0: 15 * T + 8, x1: 103 * T, y1: 6 * T, w: 3 * T, riders: 2, speed: 35 });
+  fill(106, 6, 125, 15, "#");
+  b.sign(99, 15, "This lift only rises with two riders aboard.");
+  b.beetle(112, 5);
+  const luna = b.npc("BAT", 130, 14, "Luna", "Eee! My pup fluttered up onto the high rocks and is too scared to fly down!", "Eee-eee! Thank you, sweet friends!");
+  b.item("BAT_PUP", 118, 5, luna);
+
+  // otter-only pocket with the key, then a synced color-wall gate
+  b.cp(127);
+  fill(134, 3, 134, 15, "O"); fill(139, 3, 139, 15, "S");
+  b.item("KEY", 137, 15);
+  b.bone(136, 15);
+  fill(143, 14, 144, 15, "#");
+  fill(145, 3, 145, 13, "P");
+  b.gate(145, GY, "Z", { pillar: false, rows: 2, latch: true });
+  b.button(141, 15, "Z", { sync: "Z" });
+  b.button(148, 15, "Z", { sync: "Z" });
+  b.sign(132, 15, "The key is behind an otter wall. Then: one button on each side of the red wall, pressed together!");
+  b.cp(150);
+  b.beetle(154, 15);
+  b.exit(160, GY);
+  return b.L;
+}
+
+// ------------------------------------------------------------------ Chapter 6
+function starrySummit() {
+  const b = builder(170, "Chapter 6 · Starry Summit", "The final climb. Every trick you know, together, under the stars.",
+    { sky: ["#0e1a3a", "#2b3f73", "#6a6fa8"], far: ["#2b3658", "#39466b"], mid: ["#1f2f4a", "#2a3d5c", "#16233a"], bg: [20, 30, 60], fireflies: true, stars: true });
+  const { fill, GY } = b;
+  fill(0, GY, 169, 21, "#");
+  b.spawn(3); b.cp(1);
+  b.sign(2, 15, "Starry Summit. The last climb! Stick together.");
+
+  // crumble + switch-block bridge over the void
+  fill(12, 16, 31, 21, ".");
+  fill(12, 16, 15, 16, "C"); fill(16, 16, 16, 16, "S"); fill(17, 16, 21, 16, "u"); fill(22, 16, 22, 16, "S");
+  fill(23, 16, 27, 16, "r"); fill(28, 16, 28, 16, "S"); fill(29, 16, 31, 16, "C");
+  b.lever(10, 15, "K"); b.lever(33, 15, "K");
+  b.sign(7, 15, "Crumbly rocks AND switch blocks. One crosses while the other works the lever, then swap!");
+
+  // everyone aboard
+  b.cp(33);
+  b.mover({ x0: 37 * T, y0: 15 * T + 8, x1: 37 * T, y1: 8 * T, w: 3 * T, riders: 3, speed: 30 });
+  fill(40, 8, 57, 21, "#");
+  b.sign(35, 15, "Everyone aboard! This lift needs all three of you. Tell Bear to stay on it (△ twice).");
+
+  // synced buttons across a red-panda wall
+  b.cp(41);
+  fill(47, 6, 48, 7, "#");
+  fill(49, 0, 49, 5, "P");
+  b.gate(49, 8, "Z", { pillar: false, rows: 2, latch: true });
+  b.button(45, 7, "Z", { sync: "Z" });
+  b.button(52, 7, "Z", { sync: "Z" });
+  b.sign(43, 7, "Red panda through the red wall, otter stays here. Press your buttons at the same time!");
+
+  // moving log, floating island, goat kid
+  fill(58, 16, 88, 21, ".");
+  b.mover({ x0: 58 * T, y0: 8 * T, x1: 78 * T, y1: 8 * T, w: 3 * T, speed: 40 });
+  fill(82, 6, 85, 6, "S");
+  b.bone(83, 5);
+  fill(89, 8, 110, 21, "#");
+  const pippa = b.npc("GOAT", 94, 7, "Pippa", "Maaa! My little one climbed onto that floating rock and won't come down!", "Maaa-aa! You brought her back! Bless you!");
+  b.item("GOAT_KID", 84, 5, pippa);
+  b.beetle(100, 7);
+
+  // final pulley: heavy crate + Bear outweigh both of you
+  b.cp(91);
+  b.heavy(113, 15);
+  fill(116, 16, 121, 21, ".");
+  b.pulley(116, 119, 16, 8 * T);
+  fill(122, 8, 169, 21, "#");
+  b.sign(111, 15, "The summit! Push the heavy crate onto the left platform, add Bear... then hop on the right one together.");
+
+  b.cp(124);
+  b.beetle(132, 7); b.beetle(140, 7);
+  b.bone(126, 7);
+  b.npc("RIGBY", 155, 7, "Rigby", "ARF! You made it to the top! Bear told me ALL about you two!", "ARF! You made it to the top! Bear told me ALL about you two!");
+  b.exit(160, 8);
+  return b.L;
+}
+
+LEVELS.push(lanternCaves, starrySummit);
