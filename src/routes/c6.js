@@ -60,9 +60,10 @@ export default ({ follow, swat, cross, bearSit, wait, until, go, hop, use, call,
       follow("fox");
     }],
     ["icy ridge + updraft", () => {
-      cross("fox", 131, [134]); cross("otter", 130, [134]);
+      // the otter clears the first timed spikes before swatting (walking at the beetle ran into them)
+      cross("fox", 131, [134]); cross("otter", 136, [134]);
       swat("otter", 1, 8);
-      cross("fox", 145, [141]); cross("otter", 144, [141]);
+      cross("fox", 145, [134, 141]); cross("otter", 144, [141]);
       cross("fox", 150, [148]); cross("otter", 149, [148]);
       swat("otter", 2, 8);
       go({ otter: 161, fox: 160 }, 8);
