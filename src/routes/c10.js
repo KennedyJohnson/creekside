@@ -55,12 +55,12 @@ export default ({ follow, cross, bearSit, wait, until, go, hop, use, call, stop,
       ride("otter", 79, 82); go({ otter: 83 });
       until(() => has("KEY") && has("GOAT_KID"), 3, "key + kid");
       use("fox");                                   // blue fans on
-      ride("otter", 85, 88);
+      ride("otter", 86, 89);
       go({ otter: 89 }); use("otter");              // gray fans back on
       go({ fox: 75 });
       ride("fox", 79, 82);
       use("otter");                                 // blue fans again
-      ride("fox", 85, 88);
+      ride("fox", 86, 89);
       follow("fox");
       go({ otter: 95, fox: 94 }, 6);
       cross("otter", 103); go({ fox: 104 }, 6);

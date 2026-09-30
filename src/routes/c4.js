@@ -31,7 +31,7 @@ export default ({ follow, swat, cross, bearSit, wait, until, go, hop, use, call,
       go({ otter: 51 });
       go({ otter: 54 }, 8, { noJump: true }); // crate into the thorns
       until(() => B.L.blocks[1].y >= 16 * T - 1, 4, "crate in the gap");
-      go({ otter: 55, fox: 54 }); hop("otter", 58);
+      go({ otter: 54, fox: 53 }); hop("otter", 58); // from the crate
       attack("otter", 1); hop("fox", 58, { dj: true });
       swat("otter", 0, 12, 60.2);
       go({ otter: 61, fox: 59 });
@@ -68,10 +68,15 @@ export default ({ follow, swat, cross, bearSit, wait, until, go, hop, use, call,
     ["timed bridge", () => {
       go({ otter: 125, fox: 124 }, 6);
       attack("otter", 1);
-      go({ otter: 123, fox: 127 });
+      go({ otter: 123, fox: 126 });
       use("otter");
       until(() => B.L.bridges[0].rise > 0.95, 2, "bridge up");
-      go({ otter: 137, fox: 138 }, 5);
+      go({ fox: 139 }, 5);
+      go({ otter: 136 }, 8); // the otter swims across and hops out
+      B.hold.otter.up = true; B.hold.otter.right = true;
+      for (let i = 0; i < 30 && P.otter.x < 138 * T; i++) { B.tap.otter.jump = true; B.step(8); }
+      B.hold.otter.up = B.hold.otter.right = false;
+      go({ otter: 139, fox: 138 }, 5);
     }],
     ["key + sync + bounce", () => {
       go({ otter: 140, fox: 138 });

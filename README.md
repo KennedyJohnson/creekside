@@ -55,7 +55,7 @@ Pressure plates (red ones need extra weight), levers, timed and synced buttons, 
 10. **Thunder Peak**: the finale: pool-and-perch buttons, the great scale, updrafts, and one last scale for everyone.
    *Return Pip the goat's kid, then meet Rigby at the very top.*
 
-Hint signs name new mechanics but don't give away solutions. If a puzzle goes wrong (a crate stuck in a pit, say), Options → Back to checkpoint resets that puzzle.
+Hint signs name new mechanics but don't give away solutions. If a puzzle goes wrong (a crate stuck in a pit, say), Options → Back to checkpoint resets that puzzle and calls Bear back. Stranded up ahead? Options → Warp brings whoever is ahead back to their partner (never forward, so it can't skip a puzzle). Anything you're carrying past a checkpoint (like a key) comes back to that checkpoint if you fall.
 
 ## Playtest bot
 Every chapter has a scripted route in `src/routes/` that plays it with normal controls only (no warping). Run `npm run dev`, open `game.html#c=3&go&bot`, and in the console run `await __play()` for one chapter, or `__playAll()` and later `__playAllResults()` for all ten.

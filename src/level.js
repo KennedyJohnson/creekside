@@ -280,7 +280,7 @@ function stormyFalls() {
 
   b.cp(51);
   b.crate(52, 15);
-  fill(55, 16, 57, 16, "^");
+  fill(54, 16, 57, 16, "^"); // 4 wide: too far for the otter without the crate
   fill(59, 0, 59, 12, "S"); fill(59, 13, 59, 15, "B");
   b.beetle(61, 15);
   fill(62, 16, 79, 18, "."); fill(62, 19, 79, 19, "^");
@@ -300,11 +300,11 @@ function stormyFalls() {
   b.gate(120, GY, "H");
 
   b.cp(122);
-  b.beetle(127, 15);
-  b.button(123, 15, "Q", { timer: 3 });
-  fill(128, 16, 135, 19, "W");
-  b.bridge(128, 135, 15, "Q");
-  const shelly = b.npc("TURTLE", 138, 15, "Shelly", "My hatchling sank to the bottom of the pond! I'm much too slow to reach...", "Oh, my little one! Bless you both.");
+  b.beetle(125, 15);
+  b.button(123, 15, "Q", { timer: 4 });
+  fill(127, 16, 137, 19, "W"); // too wide to jump: the red panda needs the bridge
+  b.bridge(127, 137, 15, "Q");
+  const shelly = b.npc("TURTLE", 139, 15, "Shelly", "My hatchling sank to the bottom of the pond! I'm much too slow to reach...", "Oh, my little one! Bless you both.");
   b.item("BABY_TURTLE", 133, 19, shelly);
 
   fill(141, 11, 143, 11, "S");
@@ -592,7 +592,7 @@ function clockworkMill() {
 
 // ------------------------------------------------------------------ Chapter 9
 function frozenLake() {
-  const b = builder(125, "Chapter 9 Â· Frozen Lake", "Slippery ice, crumbling snow bridges and a key up high.",
+  const b = builder(125, "Chapter 9 · Frozen Lake", "Slippery ice, crumbling snow bridges and a key up high.",
     { sky: ["#8fb8d8", "#cfe3f2", "#f2f8fc"], far: ["#b3cbe0", "#c6d9e9"], mid: ["#8cabc4", "#a2bfd4", "#6d8fa8"], bg: [185, 212, 232], leaves: "#ffffff", wind: 1 });
   const { fill, GY } = b;
   fill(0, GY, 124, 21, "#");
@@ -638,12 +638,12 @@ function frozenLake() {
 
 // ------------------------------------------------------------------ Chapter 10
 function thunderPeak() {
-  const b = builder(150, "Chapter 10 Â· Thunder Peak", "The last climb. Everything you've learned, and then some.",
+  const b = builder(150, "Chapter 10 · Thunder Peak", "The last climb. Everything you've learned, and then some.",
     { sky: ["#1c2230", "#3a4458", "#5a6478"], far: ["#2c3444", "#3a4454"], mid: ["#26323a", "#32404a", "#1a242c"], bg: [40, 48, 62], rain: true, lightning: true, fireflies: true });
   const { fill, GY } = b;
   fill(0, GY, 149, 21, "#");
   b.spawn(3); b.cp(1);
-  b.sign(4, 15, "Thunder Peak. The last climb. You've got this, you two â™¥");
+  b.sign(4, 15, "Thunder Peak. The last climb. You've got this, you two ♥");
 
   // two buttons pressed together: one at the bottom of the pool, one on a high perch
   fill(10, 16, 14, 19, "W");
@@ -667,14 +667,14 @@ function thunderPeak() {
 
   // updrafts: one set of fans to the key, the other to the way on
   b.cp(72);
-  fill(76, 16, 86, 21, ".");
-  fill(76, 21, 86, 21, "^");
+  fill(76, 16, 88, 21, ".");
+  fill(76, 21, 88, 21, "^");
   b.lever(73, 15, "W");
   fill(79, 17, 79, 21, "#"); fill(79, 16, 79, 16, "F");
   fill(81, 9, 83, 9, "S");
   b.item("KEY", 82, 8);
-  fill(85, 17, 85, 21, "#"); fill(85, 16, 85, 16, "G");
-  fill(87, 9, 110, 21, "#");
+  fill(86, 17, 86, 21, "#"); fill(86, 16, 86, 16, "G");
+  fill(89, 9, 110, 21, "#"); // too far to jump from the key rock: take the blue fans
   b.lever(89, 8, "W");
   b.beetle(100, 8);
   const pip = b.npc("GOAT", 106, 8, "Pip", "Maaa! My kid got blown up onto the key rock by the wind!", "Maaa-aa! Thank you, brave little ones!");
