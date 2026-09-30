@@ -1039,9 +1039,9 @@ const MENU = [
   { label: "Screen shake", key: "shake" },
   { label: "Hint signs", key: "hints" },
   { label: "Speech bubbles", key: "bubbles" },
-  { label: "Warp red panda to otter", act: () => warpTo(fox, otter) },
-  { label: "Warp otter to red panda", act: () => warpTo(otter, fox) },
-  { label: "Back to checkpoint (resets this puzzle)", act: () => { respawn(otter); respawn(fox); resetSectionBlocks(); setPause(false); } },
+  { label: "Warp red panda back to otter", act: () => warpTo(fox, otter) },
+  { label: "Warp otter back to red panda", act: () => warpTo(otter, fox) },
+  { label: "Back to checkpoint (resets this puzzle)", act: () => { respawn(otter); respawn(fox); resetSectionBlocks(); bearToCheckpoint(); setPause(false); } },
   { label: "Restart chapter", act: () => gotoChapter(chapter) },
   { label: "Unlock all chapters", act: () => { try { localStorage.setItem("creekside.unlocked", String(LEVELS.length)); } catch {} unlocked = LEVELS.length; toast("All chapters unlocked! Pick any from Chapter select.", 2.5); setPause(false); } },
   { label: "Swap who plays who", act: () => { setSwap(!swapPlayers); toast(`Player 1 is now the ${swapPlayers ? "red panda" : "otter"}!`, 2); setPause(false); } },
@@ -1049,15 +1049,24 @@ const MENU = [
 ];
 let menuSel = 0, prevState = "play", playTime = 0;
 // crates that started in the current section (checkpoint -> next checkpoint) go back home,
-// and that section's levers flip back, so a botched puzzle can always be retried
+// and that section's levers flip back, so a botched puzzle can always be retried.
+// Crates from earlier sections that were shoved past this checkpoint go home too
+// (e.g. a heavy crate pushed against the far wall before it was used).
 function resetSectionBlocks() {
   const from = L.checkpoints[cpIdx].tx * T, to = (L.checkpoints[cpIdx + 1]?.tx ?? L.W) * T;
   L.levers.forEach((l) => { if (l.kind === "lever" && l.x >= from && l.x < to) l.on = false; });
   L.movers.forEach((m) => { if (m.ch && m.x0 >= from && m.x0 < to) { m.x = m.x0; m.y = m.y0; } });
-  L.blocks.forEach((b) => { if (b.hx >= from && b.hx < to) { b.x = b.hx; b.y = b.hy; b.vy = 0; } });
+  L.blocks.forEach((b) => { if ((b.hx >= from && b.hx < to) || (b.hx < from && b.x >= from)) { b.x = b.hx; b.y = b.hy; b.vy = 0; } });
 }
-// stuck? pull one animal over to the other (keeps whatever they're carrying)
+// Bear comes back too, so a Bear stuck sitting somewhere can't hold up the retry
+function bearToCheckpoint() { spawnAt(bear, L.checkpoints[cpIdx].tx + 2); bear.mode = "follow"; bear.target = otter; }
+// stuck? pull one animal over to the other (keeps whatever they're carrying).
+// Only backwards: warping ahead would skip the puzzle the partner just solved alone.
 function warpTo(c, target) {
+  if (target.x > c.x + 4) {
+    toast(`Warp only brings whoever is ahead back to their partner. Stuck behind? Try Back to checkpoint.`, 3.5);
+    return setPause(false);
+  }
   burst(c.x + c.w / 2, c.y + c.h / 2, 14, [255, 255, 255]);
   c.x = target.x; c.y = target.y + target.h - c.h - 2; c.vy = 0; c.ground = null; c.dash = 0;
   burst(c.x + c.w / 2, c.y + c.h / 2, 14, [255, 255, 255]);
@@ -1157,6 +1166,9 @@ function frame(dt) {
     const nxt = L.checkpoints[cpIdx + 1];
     if (nxt && otter.x > nxt.tx * T && fox.x > nxt.tx * T) {
       cpIdx++; flags[cpIdx - 1]?.frame(1); sfx("pickup");
+      // anything carried past a checkpoint now drops back here, not at its far-off start
+      // (a key lost on a later hazard would otherwise mean redoing, or being unable to redo, an old puzzle)
+      L.items.forEach((it) => { if (it.carrier && !it.done) { it.hx = nxt.tx * T + (T - it.w) / 2; it.hy = groundY(nxt.tx) - it.h; } });
       if (toastT <= 0) toast("Checkpoint! ⛳", 1.2);
     }
     if (state === "play") playTime += dt;
@@ -1231,6 +1243,8 @@ window.__solveAll = () => {
   L.grid.forEach((row, y) => row.forEach((c, x) => { if ("DBX".includes(c)) destroyTile(x, y); if (c === "u" || c === "r") row[x] = "S"; if (c === "G") row[x] = "F"; }));
 };
 window.__setCp = (i) => { cpIdx = i; respawn(otter); respawn(fox); };
+// run a pause-menu entry by (part of) its label, e.g. __menu("Back to checkpoint")
+window.__menu = (label) => MENU.find((m) => m.label.includes(label)).act();
 // bot.step(n): advance n fixed 1/60 s frames synchronously, consuming taps after the first
 window.__bot = Object.defineProperties(bot, Object.getOwnPropertyDescriptors({
   step(n = 1) { for (let i = 0; i < n; i++) { frame(1 / 60); bot.tap = { otter: {}, fox: {} }; } },
