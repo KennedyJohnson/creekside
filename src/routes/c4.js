@@ -47,6 +47,14 @@ export default ({ follow, swat, cross, bearSit, wait, until, go, hop, use, call,
       go({ fox: 61 }); ride("otter");
       until(() => intact(71, 77, 16), 8, "rocks back");
       ride("fox");
+      // Olive's owlet: the red panda double-jumps from the ledge to the perch over the thorns and back
+      go({ fox: 80 }, 4);
+      hop("fox", 75, { dj: true });
+      go({ fox: 74 }, 3);
+      until(() => has("OWLET"), 2, "owlet");
+      hop("fox", 80, { dj: true });
+      go({ fox: 84 }, 4);
+      until(() => B.friends >= 1, 2, "owlet home");
       follow("fox");
       go({ otter: 101, fox: 100 }, 8);
     }],
@@ -72,11 +80,17 @@ export default ({ follow, swat, cross, bearSit, wait, until, go, hop, use, call,
       use("otter");
       until(() => B.L.bridges[0].rise > 0.95, 2, "bridge up");
       go({ fox: 139 }, 5);
+      // Shelly's hatchling: the otter dives to the bottom of the pond on the way across
+      B.hold.otter.down = true;
+      go({ otter: 133 }, 8);
+      until(() => has("BABY_TURTLE"), 4, "baby turtle");
+      B.hold.otter.down = false;
       go({ otter: 136 }, 8); // the otter swims across and hops out
       B.hold.otter.up = true; B.hold.otter.right = true;
       for (let i = 0; i < 30 && P.otter.x < 138 * T; i++) { B.tap.otter.jump = true; B.step(8); }
       B.hold.otter.up = B.hold.otter.right = false;
       go({ otter: 139, fox: 138 }, 5);
+      until(() => B.friends >= 2, 2, "hatchling home");
     }],
     ["key + sync + bounce", () => {
       go({ otter: 140, fox: 138 });
