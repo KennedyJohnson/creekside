@@ -66,3 +66,10 @@ Chiptune music and sound effects are synthesized live with the Web Audio API. Cl
 ## Development
 Every push to `master` is built and deployed to GitHub Pages automatically by `.github/workflows/pages.yml`.
 All art is procedural pixel art in `src/art.js` (ASCII sprite grids). Chapter layouts are in `src/level.js`, and game logic is in `src/main.js`.
+
+## Tools used
+
+- JavaScript
+- WebGL (Emerald)
+- Gamepad API
+- Vite
