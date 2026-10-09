@@ -11,10 +11,20 @@ const { initAudio, sfx, playMusic, toggleMute, vol, applyVolume } = AU;
 
 // ---------- Chapter selection (#c=2&go skips the title) ----------
 const hp = new URLSearchParams(location.hash.slice(1));
-const chapter = Math.min(LEVELS.length - 1, Math.max(0, (parseInt(hp.get("c")) || 1) - 1));
 let unlocked = 1;
 try { unlocked = Math.max(1, +localStorage.getItem("creekside.unlocked") || 1); } catch {}
+// no #c= in the URL: continue from the furthest unlocked chapter
+const chapter = hp.has("c")
+  ? Math.min(LEVELS.length - 1, Math.max(0, (parseInt(hp.get("c")) || 1) - 1))
+  : Math.min(LEVELS.length - 1, unlocked - 1);
 const L = LEVELS[chapter]();
+// best time + collectibles per chapter: { [index]: { t, f, b } } (t = seconds, f/b = friends, bones)
+const BEST_KEY = "creekside.best";
+let best = {};
+try { best = JSON.parse(localStorage.getItem(BEST_KEY) || "{}") || {}; } catch {}
+// collectible totals per chapter, for the best-run line on the chapter select
+const CH_TOTALS = LEVELS.map((mk) => { const l = mk(); return { f: l.items.filter((i) => i.npc).length, b: l.items.filter((i) => i.kind === "bone").length }; });
+const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const TH = L.theme;
 
 // ---------- Engine setup ----------
@@ -160,13 +170,25 @@ const PAD_NAMES = new Set(["dpadLeft", "dpadRight", "dpadUp", "dpadDown", "south
 const padFor = { otter: 0, fox: 1 };
 let padKey = null, swapPlayers = false;
 try { swapPlayers = localStorage.getItem("creekside.swap") === "1"; } catch {}
+// one-player mode: one character at a time, Tab switches. Both keyboard layouts (and the first pad) drive
+// whichever animal is active; the other one stands still (no input) but keeps its physics and plates.
+let solo = false, activeKind = "otter";
+try { solo = localStorage.getItem("creekside.solo") === "1"; } catch {}
+const P1_KIND = () => (swapPlayers ? "fox" : "otter");
+function setSolo(v) {
+  solo = v;
+  try { localStorage.setItem("creekside.solo", v ? "1" : "0"); } catch {}
+  activeKind = P1_KIND();
+  bindPads(true);
+}
 function bindPads(force) {
   const pads = [...(navigator.getGamepads?.() || [])].filter(Boolean).map((g) => g.index).sort((a, b) => a - b);
-  const key = pads.join(",") + (swapPlayers ? "s" : "");
+  const key = pads.join(",") + (swapPlayers ? "s" : "") + (solo ? "1" : "");
   if (key === padKey && !force) return;
   padKey = key;
   const p1 = pads[0] ?? 0, p2 = pads[1] ?? (pads[0] === 1 ? 0 : 1);
   padFor.otter = swapPlayers ? p2 : p1; padFor.fox = swapPlayers ? p1 : p2;
+  if (solo) padFor.otter = padFor.fox = pads[0] ?? 0;
   for (const who of ["otter", "fox"]) {
     const layout = KEYS[swapPlayers ? (who === "otter" ? "fox" : "otter") : who];
     for (const [act, list] of Object.entries(layout)) {
@@ -179,16 +201,36 @@ function bindPads(force) {
 function setSwap(v) {
   swapPlayers = v;
   try { localStorage.setItem("creekside.swap", v ? "1" : "0"); } catch {}
+  activeKind = P1_KIND();
   bindPads(true);
 }
+activeKind = P1_KIND();
 bindPads();
 window.addEventListener("gamepadconnected", bindPads);
 window.addEventListener("gamepaddisconnected", bindPads);
 let edgeOff = false;
 // playtest bot (#bot): scripted virtual inputs replace the keyboard / pads
 const bot = { on: hp.has("bot"), hold: { otter: {}, fox: {} }, tap: { otter: {}, fox: {} } };
-const pressed = (who, a) => !edgeOff && (bot.on ? !!bot.tap[who][a] : input.justPressed(`${who}.${a}`));
-const held = (who, a) => (bot.on ? !!bot.hold[who][a] : input.isDown(`${who}.${a}`));
+// solo: only the active animal takes input, from either keyboard layout (WASD+Space or arrows+.) or pad 1
+const srcs = (who) => (solo ? ["otter", "fox"] : [who]);
+const pressed = (who, a) => {
+  if (edgeOff || (solo && who !== activeKind)) return false;
+  if (bot.on) return !!bot.tap[who][a];
+  return srcs(who).some((w) => input.justPressed(`${w}.${a}`));
+};
+const held = (who, a) => {
+  if (solo && who !== activeKind) return false;
+  if (bot.on) return !!bot.hold[who][a];
+  return srcs(who).some((w) => input.isDown(`${w}.${a}`));
+};
+input.mapAction("solo.switch", ["Tab"]);
+function switchActive() {
+  activeKind = activeKind === "otter" ? "fox" : "otter";
+  const me = activeKind === "otter" ? otter : fox;
+  burst(me.x + me.w / 2, me.y + me.h / 2, 10, [255, 255, 255]);
+  sfx("select");
+  toast(`Now playing: the ${NAME[activeKind]}. The other one waits here.`, 2);
+}
 function stick(who) {
   const pad = padFor[who];
   let x = (held(who, "right") ? 1 : 0) - (held(who, "left") ? 1 : 0);
@@ -212,6 +254,7 @@ syncAudio();
 const unlockAudio = () => { initAudio(); syncAudio(); };
 window.addEventListener("keydown", (e) => {
   unlockAudio();
+  if (e.key === "Tab") e.preventDefault(); // Tab switches character in one-player mode; keep it from moving focus
   if (e.key === "m" || e.key === "M") toast(toggleMute() ? "🔇 Sound off (M)" : "🔊 Sound on (M)", 1.5);
 });
 window.addEventListener("pointerdown", unlockAudio);
@@ -1006,7 +1049,11 @@ function drawWho() {
   const pads = [...(navigator.getGamepads?.() || [])].filter(Boolean).length;
   $("whoP1").textContent = label(p1); $("whoP2").textContent = label(p2);
   $("whoC1").textContent = pads >= 1 ? "🎮 Controller 1" : "⌨ WASD + Space";
-  $("whoC2").textContent = pads >= 2 ? "🎮 Controller 2" : "⌨ Arrow keys";
+  $("whoC2").textContent = solo ? "⇥ Tab switches to this one" : pads >= 2 ? "🎮 Controller 2" : "⌨ Arrow keys";
+  $("whoMode").textContent = solo ? "▲ ▼  One player (Tab switches character)  ·  ▲ ▼ for two players" : "▲ ▼  Two players  ·  ▲ ▼ for one player (Tab switches character)";
+  $("whoKeys").textContent = solo
+    ? "Keyboard: WASD + Space or arrows + . both control whoever is active · Tab switches · Esc pauses"
+    : "Keyboard: WASD + Space (player 1) · Arrow keys + . (player 2) · Esc pauses";
   $("whoImg1").replaceChildren(spriteCanvas(p1 === "otter" ? "OTTER" : "FOX"));
   $("whoImg2").replaceChildren(spriteCanvas(p2 === "otter" ? "OTTER" : "FOX", true));
 }
@@ -1104,9 +1151,13 @@ const gotoChapter = (i) => { location.hash = `c=${i + 1}&go`; location.reload();
 function drawChapters() {
   const html = CH_NAMES.map((name, i) => {
     const lock = i + 1 > unlocked;
-    return `<span class="${i === sel ? "sel" : ""} ${lock ? "lock" : ""}">${lock ? "🔒" : i + 1 + "."} ${name}</span>`;
+    const done = best[i] ? " ✓" : "";
+    return `<span class="${i === sel ? "sel" : ""} ${lock ? "lock" : ""}">${lock ? "🔒" : i + 1 + "."} ${name}${done}</span>`;
   }).join("");
   if (chapEl.innerHTML !== html) chapEl.innerHTML = html;
+  const b = best[sel], bestEl = $("best");
+  const line = b ? `Best: ${fmtTime(b.t)} · Friends ${b.f}/${CH_TOTALS[sel].f} · Bones ${b.b}/${CH_TOTALS[sel].b}` : sel + 1 > unlocked ? "Locked" : "Not finished yet";
+  if (bestEl.textContent !== line) bestEl.textContent = line;
 }
 function updatePads() {
   const pad = (i, el, name) => { el.textContent = `${name}: ${input.isGamepadConnected?.(i) ? "🎮 controller connected" : "⌨ keyboard (press a button on a controller)"}`; };
@@ -1129,6 +1180,7 @@ function frame(dt) {
   } else if (state === "who") {
     updatePads();
     if (["otter", "fox"].some((w) => pressed(w, "mLeft") || pressed(w, "mRight"))) { setSwap(!swapPlayers); drawWho(); sfx("select"); }
+    if (["otter", "fox"].some((w) => pressed(w, "mUp") || pressed(w, "mDown"))) { setSolo(!solo); drawWho(); sfx("select"); }
     if (anyStart) { state = "title"; whoEl.classList.add("hidden"); titleEl.classList.remove("hidden"); sfx("pet"); }
   } else if (state === "pause") {
     const any = (act) => ["otter", "fox"].some((w) => pressed(w, act));
@@ -1150,6 +1202,7 @@ function frame(dt) {
     }
   } else {
     if (pressed("otter", "pause") || pressed("fox", "pause")) { setPause(true); return; }
+    if (solo && !bot.on && input.justPressed("solo.switch")) switchActive();
     const steps = Math.ceil(dt / (1 / 120)), h = dt / steps;
     for (let i = 0; i < steps; i++) {
       const rects = dynSolids();
@@ -1182,7 +1235,12 @@ function frame(dt) {
         $("winTitle").textContent = last ? "The End ♥" : `${CH_NAMES[chapter]} complete!`;
         sfx("win");
         const mm = Math.floor(playTime / 60), ss = String(Math.floor(playTime % 60)).padStart(2, "0");
-        $("winSub").textContent = `Time ${mm}:${ss} · Friends helped: ${friends}/${totalFriends} · Bones for Bear: ${bones}/${totalBones}` + (last ? " · You did it together. Bear, Rigby and all your new friends are SO proud of you two ♥" : "");
+        const prev = best[chapter], t = Math.round(playTime * 10) / 10;
+        const cur = prev ? { t: Math.min(prev.t, t), f: Math.max(prev.f, friends), b: Math.max(prev.b, bones) } : { t, f: friends, b: bones };
+        best[chapter] = cur;
+        try { localStorage.setItem(BEST_KEY, JSON.stringify(best)); } catch {}
+        const newBest = !prev || t < prev.t;
+        $("winSub").textContent = `Time ${mm}:${ss}${newBest ? " (new best!)" : ` (best ${fmtTime(cur.t)})`} · Friends helped: ${friends}/${totalFriends} · Bones for Bear: ${bones}/${totalBones}` + (last ? " · You did it together. Bear, Rigby and all your new friends are SO proud of you two ♥" : "");
         $("winNext").textContent = last ? "Press ✕ to play again from the start" : "Press ✕ for the next chapter";
       }
     }
@@ -1198,7 +1256,8 @@ function frame(dt) {
     const text = !settings.hints ? "" : npc ? `${npc.name}: "${npc.helped ? npc.thanks : npc.say}"` : sign ? sign.text : "";
     hintEl.textContent = text;
     hintEl.classList.toggle("show", !!text);
-    hudEl.textContent = `⏸ Options/Esc   ·   ${L.name}   ·   Friends ${friends}/${totalFriends}   ·   🦴 ${bones}/${totalBones}` + (L.items.some((i) => i.kind === "key" && i.carrier) ? "   ·   🔑" : "");
+    hudEl.textContent = `⏸ Options/Esc   ·   ${L.name}   ·   Friends ${friends}/${totalFriends}   ·   🦴 ${bones}/${totalBones}` + (L.items.some((i) => i.kind === "key" && i.carrier) ? "   ·   🔑" : "")
+      + (solo ? `   ·   Playing: ${NAME[activeKind]} (Tab: switch to ${NAME[activeKind === "otter" ? "fox" : "otter"]})` : "");
   }
 
   parts.forEach((p) => {

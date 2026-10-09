@@ -8,9 +8,15 @@ Solve puzzles that need all three of you, and help lost woodland friends get hom
 Inspired by *It Takes Two* and *Pico Park*.
 
 ## How to play
-Open the link in **Chrome or Edge**, plug in two PS5 controllers, and press any button on each so the browser detects them.
-On the **Who's who?** screen, press ◀ ▶ to choose which player is the otter and which is the red panda (you can swap later from the pause menu). Press Options (or Esc) to pause and adjust music, sound and other settings. Pick a chapter with ◀ ▶ and press ✕.
-Progress is saved in your browser, so finished chapters unlock the next one.
+Open the link in any modern browser. No controllers needed: the keyboard works for everyone.
+
+- **Two players, one keyboard:** the otter uses **WASD + Space**, the red panda uses **arrow keys + .** (period), so two people can share one keyboard.
+- **Two PS5 controllers:** plug them in and press any button on each so the browser detects them. Controller 1 is the otter, controller 2 is the red panda.
+- **One player:** on the **Who's who?** screen press ▲ ▼ to pick one player. Then **Tab** switches between the otter and the red panda. The character you are not playing waits where they stand, and the HUD shows which one is active. Solo mode is keyboard-only for now (controllers still work for the active character, but there is no controller button to switch).
+
+On the **Who's who?** screen, press ◀ ▶ to choose which player is the otter and which is the red panda (you can swap later from the pause menu). Press ✕ or Enter to continue, then pick a chapter with ◀ ▶ and press ✕ or Enter. Press Options or Esc to pause and adjust music, sound and other settings.
+
+**Saved in your browser:** finished chapters unlock the next one, and the chapter select shows a ✓ on each finished chapter with your best time and friends/bones found. Reopening the game continues from your furthest unlocked chapter. Your chapter select, saved best runs and one-player setting stay in this browser only.
 
 | | Otter (controller 1 / keyboard) | Red panda (controller 2 / keyboard) |
 |---|---|---|
@@ -23,6 +29,7 @@ Progress is saved in your browser, so finished chapters unlock the next one.
 | Pet Bear · cuddle your partner · roll over | L1·R1 / Q | L1·R1 / / |
 | Pause (volume, restart chapter, back to checkpoint, swap players, unlock all) | Options / Esc | Options / Esc |
 | Back to checkpoint | Share / R | Share |
+| Switch character (one player only) | Tab | Tab |
 
 ## The team
 - **Otter**: swims, slams through cracked rock, and juggles a favorite pebble when idle.
