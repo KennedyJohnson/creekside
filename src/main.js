@@ -1024,8 +1024,9 @@ function updateWorld(dt, rects) {
 // ---------- Camera ----------
 let camX = 0, camY = 0;
 function updateCamera(dt, snap) {
-  const tx = Math.min(Math.max((otter.x + fox.x) / 2 + 7, viewW / 2), LW - viewW / 2);
-  const ty = Math.min(Math.max((otter.y + fox.y) / 2 - 30, viewH / 2), LH - viewH / 2);
+  // A viewport wider than the level inverts the min/max clamp and parks the camera outside it.
+  const tx = viewW >= LW ? LW / 2 : Math.min(Math.max((otter.x + fox.x) / 2 + 7, viewW / 2), LW - viewW / 2);
+  const ty = viewH >= LH ? LH / 2 : Math.min(Math.max((otter.y + fox.y) / 2 - 30, viewH / 2), LH - viewH / 2);
   const k = snap ? 1 : Math.min(1, dt * 4);
   camX += (tx - camX) * k; camY += (ty - camY) * k;
   const sh = shakeT > 0 ? ((shakeT -= dt), settings.shake ? 3 : 0) : 0;

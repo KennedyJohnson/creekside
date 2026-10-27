@@ -120,6 +120,9 @@ export function playMusic(i) {
   // a fixed 4-bar melody per song so it feels like a tune, not noise
   const melody = Array.from({ length: 32 }, (_, k) => (k % 4 === 3 && rnd() < 0.5 ? null : song.scale[Math.floor(rnd() * song.scale.length)] + (rnd() < 0.3 ? 12 : 0)));
   timer = setInterval(() => {
+    // A background tab throttles this interval but not the audio clock, so on return `next` can be minutes
+    // behind and every queued note gets a negative delay — hundreds of oscillators fire at once.
+    if (next < ctx.currentTime) next = ctx.currentTime + 0.05;
     while (next < ctx.currentTime + 0.25) {
       const bar = Math.floor(n / 8) % 4, beat = n % 8, ch = song.chords[bar];
       const o = { bus: musicBus, delay: next - ctx.currentTime };
