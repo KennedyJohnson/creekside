@@ -1040,10 +1040,30 @@ function updateCamera(dt, snap) {
 const toScreen = (x, y) => [window.innerWidth / 2 + (x - camX) * Z, window.innerHeight / 2 + (y - camY) * Z];
 
 // ---------- Game flow ----------
-let state = hp.has("go") ? "play" : "splash", winT = 0, sel = chapter;
-const titleEl = $("title"), winEl = $("win"), chapEl = $("chapters");
+// Screen flow is a small state machine. `go(next)` is the only place `state` changes:
+// it checks the move is allowed and shows/hides each screen's overlay card.
+//   splash -> who -> title -> play <-> pause, play -> win (win can also pause).
+// "pause" layers over the screen it interrupted and returns to it on resume.
+const FLOW = {
+  splash: { card: "splash", next: ["who"] },
+  who: { card: "who", next: ["title"] },
+  title: { card: "title", next: ["play"] },
+  play: { card: null, next: ["pause", "win"] },
+  pause: { card: "pause", next: ["play", "win"] },
+  win: { card: "win", next: ["pause"] },
+};
+let state = hp.has("go") ? "play" : "splash", winT = 0, sel = chapter, prevState = "play";
+function go(next) {
+  if (next === state) return;
+  if (!FLOW[state].next.includes(next)) console.warn(`creekside: unexpected screen change ${state} -> ${next}`);
+  const card = (st, show) => FLOW[st].card && $(FLOW[st].card).classList.toggle("hidden", !show);
+  if (next === "pause") prevState = state; // keep the interrupted screen's card up underneath
+  else card(state, false);
+  card(next, true);
+  state = next;
+}
+const chapEl = $("chapters");
 const CH_NAMES = ["Creekside", "Mossy Hollow", "Windy Ridge", "Stormy Falls", "Lantern Caves", "Starry Summit", "Sunken Grotto", "Clockwork Mill", "Frozen Lake", "Thunder Peak"];
-const splashEl = $("splash"), pauseEl = $("pause"), whoEl = $("who");
 function drawWho() {
   const p1 = swapPlayers ? "fox" : "otter", p2 = swapPlayers ? "otter" : "fox";
   const label = (who) => (who === "otter" ? "Otter" : "Red panda");
@@ -1066,8 +1086,9 @@ function spriteCanvas(k, flip) {
   img.src = a.url;
   return c;
 }
-if (state === "play") { titleEl.classList.add("hidden"); splashEl.classList.add("hidden"); toast(L.sub, 4); }
-else titleEl.classList.add("hidden");
+// sync the cards with the starting screen (game.html shows splash + title by default)
+Object.entries(FLOW).forEach(([st, f]) => f.card && $(f.card).classList.toggle("hidden", st !== state));
+if (state === "play") toast(L.sub, 4);
 // splash art: the gang, drawn from the same pixel sprites
 [["OTTER", 0], ["FOX", 0], ["BEAR", 0], ["RIGBY", 0]].forEach(([k, f]) => {
   const a = ART[k], c = document.createElement("canvas");
@@ -1095,7 +1116,7 @@ const MENU = [
   { label: "Swap who plays who", act: () => { setSwap(!swapPlayers); toast(`Player 1 is now the ${swapPlayers ? "red panda" : "otter"}!`, 2); setPause(false); } },
   { label: "Chapter select", act: () => { location.hash = ""; location.reload(); } },
 ];
-let menuSel = 0, prevState = "play", playTime = 0;
+let menuSel = 0, playTime = 0;
 // crates that started in the current section (checkpoint -> next checkpoint) go back home,
 // and that section's levers flip back, so a botched puzzle can always be retried.
 // Crates from earlier sections that were shoved past this checkpoint go home too
@@ -1122,9 +1143,8 @@ function warpTo(c, target) {
 }
 window.addEventListener("gamepaddisconnected", () => { if (state === "play") { setPause(true); toast("A controller disconnected. Reconnect it and press Options.", 4); } });
 function setPause(on) {
-  if (on) { prevState = state; state = "pause"; menuSel = 0; drawMenu(); }
-  else state = prevState;
-  pauseEl.classList.toggle("hidden", !on);
+  if (on) { menuSel = 0; drawMenu(); go("pause"); }
+  else if (state === "pause") go(prevState);
 }
 function drawMenu() {
   $("menu").innerHTML = MENU.map((m, i) => {
@@ -1176,13 +1196,13 @@ function frame(dt) {
   if (state === "splash") {
     updatePads();
     if (anyStart || pressed("otter", "jump") || pressed("fox", "jump")) {
-      state = "who"; splashEl.classList.add("hidden"); whoEl.classList.remove("hidden"); drawWho(); sfx("pet");
+      go("who"); drawWho(); sfx("pet");
     }
   } else if (state === "who") {
     updatePads();
     if (["otter", "fox"].some((w) => pressed(w, "mLeft") || pressed(w, "mRight"))) { setSwap(!swapPlayers); drawWho(); sfx("select"); }
     if (["otter", "fox"].some((w) => pressed(w, "mUp") || pressed(w, "mDown"))) { setSolo(!solo); drawWho(); sfx("select"); }
-    if (anyStart) { state = "title"; whoEl.classList.add("hidden"); titleEl.classList.remove("hidden"); sfx("pet"); }
+    if (anyStart) { go("title"); sfx("pet"); }
   } else if (state === "pause") {
     const any = (act) => ["otter", "fox"].some((w) => pressed(w, act));
     if (any("mUp")) { menuSel = (menuSel + MENU.length - 1) % MENU.length; drawMenu(); sfx("select"); }
@@ -1199,7 +1219,7 @@ function frame(dt) {
     drawChapters();
     if (anyStart) {
       if (sel !== chapter) return gotoChapter(sel);
-      state = "play"; titleEl.classList.add("hidden"); toast(L.sub, 4);
+      go("play"); toast(L.sub, 4);
     }
   } else {
     if (pressed("otter", "pause") || pressed("fox", "pause")) { setPause(true); return; }
@@ -1230,7 +1250,7 @@ function frame(dt) {
     if (state === "play" && overlaps(otter, L.exit) && overlaps(fox, L.exit)) {
       if (!keysOk) { if (toastT <= 0) toast("The den is locked. Bring the key!", 1.5); }
       else {
-        state = "win"; winT = 0; winEl.classList.remove("hidden");
+        go("win"); winT = 0;
         try { localStorage.setItem("creekside.unlocked", String(Math.max(unlocked, chapter + 2))); } catch {}
         const last = chapter === LEVELS.length - 1;
         $("winTitle").textContent = last ? "The End ♥" : `${CH_NAMES[chapter]} complete!`;
