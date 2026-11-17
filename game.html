@@ -53,6 +53,11 @@
   body.flash #fx { background: rgba(230, 240, 255, .45); }
   body.rain::after { content: ""; position: fixed; inset: 0; pointer-events: none; background: rgba(10, 20, 40, .22); }
   b { color: #ffd23f; }
+
+/* UI baseline: keyboard focus, reduced motion, text wrapping */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
 </style>
 </head>
 <body>
